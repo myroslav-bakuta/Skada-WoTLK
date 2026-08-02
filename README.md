@@ -58,7 +58,7 @@ Bundled languages are English, Russian and Ukrainian. The German, Spanish, Frenc
 * **SmartStop:** a broken condition chain made the option do nothing at all and inverted the creature ignore list.
 * **Enemies:** `type(unit.diff == "table")` always evaluated to `"boolean"`, so instance difficulty was never matched correctly. The "Enemy Healing Done" window title also grew endlessly, repeating the class name on each refresh.
 * **Deaths:** the death log entry was keyed by GUID on cleanup but by name on insertion, so it was never cleared after a resurrection and the death aura blocked the next record.
-* **Healing:** a fully overhealed hit recorded a minimum of zero, skewing the minimum healing figure.
+* **Healing:** a fully overhealed hit recorded a minimum of zero, skewing the minimum healing figure. This applies to both normal hits and criticals. Hit counts and totals still include those hits, only the minimum and maximum skip them.
 * **Comparison:** blocked damage was labelled `RESIST` instead of `BLOCK`.
 * **Parry:** announcements were duplicated once per boss phase because phase segments were also matched.
 * **Nickname:** the broadcast timer was cancelled with a string instead of the timer handle, so it was never actually cancelled.

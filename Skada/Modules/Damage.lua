@@ -282,7 +282,7 @@ Skada:RegisterModule("Damage", function(L, P)
 		if label == L["Critical Hits"] or label == L["Normal Hits"] or label == L["Glancing"] then
 			local set = win:GetSelectedSet()
 			local actor = set and set:GetActor(win.actorname, win.actorid)
-			local spell = actor.damagespells and actor.damagespells[win.spellid]
+			local spell = actor and actor.damagespells and actor.damagespells[win.spellid]
 			if not spell then return end
 
 			tooltip:AddLine(uformat("%s - %s", classfmt(win.actorclass, win.actorname), win.spellname))

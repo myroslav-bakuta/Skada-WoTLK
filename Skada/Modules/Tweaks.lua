@@ -175,17 +175,19 @@ Skada:RegisterModule("Tweaks", function(L, P, _, _, _, O)
 				return mode.hooks.SetItemRef(link, text, button, chatframe)
 			end
 
-			local meterid = tonumber(id)
+			local meter = meters[tonumber(id)]
+			if not meter then return end -- stale/foreign link (e.g. after /reload)
+
 			ShowUIPanel(ItemRefTooltip)
 			if not ItemRefTooltip:IsShown() then
 				ItemRefTooltip:SetOwner(UIParent, "ANCHOR_PRESERVE")
 			end
 			ItemRefTooltip:ClearLines()
-			ItemRefTooltip:AddLine(meters[meterid].title)
-			ItemRefTooltip:AddLine(format(L["Reported by: %s"], meters[meterid].src))
+			ItemRefTooltip:AddLine(meter.title)
+			ItemRefTooltip:AddLine(format(L["Reported by: %s"], meter.src))
 			ItemRefTooltip:AddLine(" ")
-			for i = 1, #meters[meterid].data do
-				local line = meters[meterid].data[i]
+			for i = 1, #meter.data do
+				local line = meter.data[i]
 				if line then
 					ItemRefTooltip:AddLine(line, 1, 1, 1)
 				end

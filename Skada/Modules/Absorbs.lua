@@ -631,8 +631,8 @@ Skada:RegisterModule("Absorbs", function(L, P, G)
 				s.amount = floor(total * 0.2)
 			elseif s and s.spellid == 62606 then -- Savage Defense
 				local base, posBuff, negBuff = UnitAttackPower(t.dstName)
-				if base > 0 then -- only works if you're the bear
-					s.amount = floor((base + posBuff + negBuff) * 0.25)
+				if base and base > 0 then -- only works if you're the bear
+					s.amount = floor((base + (posBuff or 0) + (negBuff or 0)) * 0.25)
 				end
 			end
 		end
@@ -1501,7 +1501,7 @@ Skada:RegisterModule("HPS", function(L, P)
 		local activetime = actor:GetTime(set, true)
 		local hps, amount = actor:GetAHPS(set)
 
-		tooltip:AddLine(uformat(L["%s's activity"], classfmt(actor.class, label), L["HPS"]))
+		tooltip:AddLine(uformat("%s - %s", classfmt(actor.class, label), L["HPS"]))
 		tooltip:AddDoubleLine(L["Segment Time"], Skada:FormatTime(set:GetTime()), 1, 1, 1)
 		tooltip:AddDoubleLine(L["Active Time"], Skada:FormatTime(activetime), 1, 1, 1)
 		tooltip:AddDoubleLine(L["Absorbs and Healing"], Skada:FormatNumber(amount), 1, 1, 1)
@@ -1614,9 +1614,17 @@ Skada:RegisterModule("Healing Done By Spell", function(L, _, _, C)
 				tooltip:AddDoubleLine(L["Critical"], Skada:FormatPercent(spell.c_num, spell.count), 1, 1, 1)
 			end
 
-			if spell.min and spell.max then
-				tooltip:AddDoubleLine(L["Minimum"], Skada:FormatNumber(spell.min), 1, 1, 1)
-				tooltip:AddDoubleLine(L["Maximum"], Skada:FormatNumber(spell.max), 1, 1, 1)
+			local spellmin = spell.n_min
+			if spell.c_min and (not spellmin or spell.c_min < spellmin) then
+				spellmin = spell.c_min
+			end
+			local spellmax = spell.n_max
+			if spell.c_max and (not spellmax or spell.c_max > spellmax) then
+				spellmax = spell.c_max
+			end
+			if spellmin and spellmax then
+				tooltip:AddDoubleLine(L["Minimum"], Skada:FormatNumber(spellmin), 1, 1, 1)
+				tooltip:AddDoubleLine(L["Maximum"], Skada:FormatNumber(spellmax), 1, 1, 1)
 				tooltip:AddDoubleLine(L["Average"], Skada:FormatNumber(spell.amount / spell.count), 1, 1, 1)
 			end
 		end

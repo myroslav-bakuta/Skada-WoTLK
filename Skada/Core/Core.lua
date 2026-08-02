@@ -111,7 +111,7 @@ local function verify_set(mode, set)
 		for _, actor in pairs(actors) do
 			if actor.enemy and mode.AddEnemyAttributes then
 				mode:AddEnemyAttributes(actor, set)
-			elseif not actor.enemy and mode.mode.AddPlayerAttributes then
+			elseif not actor.enemy and mode.AddPlayerAttributes then
 				mode:AddPlayerAttributes(actor, set)
 			end
 		end
@@ -1149,7 +1149,7 @@ function set_active(enable)
 		local db = win and win.db
 		if db and enable and not db.hidden and not win:IsShown() then
 			win:Show()
-		elseif db and not enable or not db.hidden and win:IsShown() then
+		elseif db and (not enable or db.hidden) and win:IsShown() then
 			win:Hide()
 		end
 	end

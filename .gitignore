@@ -6,3 +6,9 @@ Makefile
 *.sublime-project
 *.sublime-workspace
 *.todolist
+
+# local working files, not part of the addon
+/CLAUDE.md
+/BUGFIX_REPORT.md
+/.claude/
+/.remember/

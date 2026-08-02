@@ -151,7 +151,7 @@ Skada:RegisterModule("Enemy Damage Taken", function(L, P, _, C)
 	end
 
 	local function start_custom_unit(unit, creatureId, guid, name, amount, overkill)
-		if unit.diff ~= nil and ((type(unit.diff == "table") and not unit.diff[get_instance_diff()]) or (type(unit.diff) ~= "table" and unit.diff ~= get_instance_diff())) then
+		if unit.diff ~= nil and ((type(unit.diff) == "table" and not unit.diff[get_instance_diff()]) or (type(unit.diff) ~= "table" and unit.diff ~= get_instance_diff())) then
 			ignored_units[guid] = true
 			return false
 		end
@@ -685,7 +685,7 @@ Skada:RegisterModule("Enemy Damage Taken", function(L, P, _, C)
 
 		for actorname, actor in pairs(actors) do
 			if actor.enemy then
-				local dtps, amount = actor:GetDTPS(set, nil, not mode_cols.sDTPS)
+				local dtps, amount = actor:GetDTPS(set, not mode_cols.DTPS)
 				if amount and amount > 0 then
 					nr = nr + 1
 
@@ -1432,7 +1432,7 @@ Skada:RegisterModule("Enemy Healing Done", function(L, P)
 	end
 
 	function mode:Update(win, set)
-		win.title = win.class and format("%s (%s)", win.title, L[win.class]) or L["Enemy Healing Done"]
+		win.title = win.class and format("%s (%s)", L["Enemy Healing Done"], L[win.class]) or L["Enemy Healing Done"]
 
 		local total = set and set:GetHeal(win.class, true)
 		if not total or total == 0 then

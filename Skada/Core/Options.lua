@@ -350,6 +350,29 @@ options.args.generaloptions = {
 						Private.RefreshButton()
 					end
 				},
+				uklangbox = {
+					type = "group",
+					name = "\124cffb57edcМова / Language\124r",
+					inline = true,
+					order = 9,
+					args = {
+						uklang = {
+							type = "toggle",
+							name = L["Ukrainian language"],
+							desc = L["opt_uklang_desc"],
+							width = "full",
+							order = 1,
+							get = function()
+								return Skada.global.uklang ~= false
+							end,
+							set = function(_, value)
+								Skada.global.uklang = value
+								ReloadUI()
+							end,
+							confirm = function() return L["This change requires a UI reload. Are you sure?"] end
+						}
+					}
+				},
 				mergepets = {
 					type = "toggle",
 					name = L["Merge pets"],

@@ -1528,6 +1528,29 @@ do
 			end
 		end
 
+		-- negative cache: guids we already failed to resolve.
+		-- without it, every single combat log event of an unresolvable
+		-- pet/guardian (i.e. Snake Trap snakes, enemy pets in PvP) would
+		-- trigger a full roster scan + tooltip scan, causing FPS drops.
+		-- NOTE: this is deliberately not a WeakTable: keys are strings and
+		-- values are numbers, neither of which lua 5.1 ever collects, so a
+		-- weak table would grow forever anyway. we prune it ourselves below.
+		local unknown_pets = {}
+		local unknown_count = 0 -- entries added since the last prune
+		local UNKNOWN_PET_COOLDOWN = 30 -- seconds before we retry
+		local UNKNOWN_PET_PRUNE = 100 -- prune after this many entries
+
+		-- drop expired entries. amortized: runs once every UNKNOWN_PET_PRUNE
+		-- failures instead of on every combat log event.
+		local function PruneUnknownPets(now)
+			unknown_count = 0
+			for guid, expires in pairs(unknown_pets) do
+				if now >= expires then
+					unknown_pets[guid] = nil
+				end
+			end
+		end
+
 		local function FixPetsHandler(guid, flag)
 			local guidOrClass = guid and guidToClass[guid]
 			if guidOrClass and guidToName[guidOrClass] then
@@ -1543,12 +1566,21 @@ do
 			-- no owner yet?
 			if not guid then return end
 
-			-- guess the pet from roster.
+			-- recently failed to resolve? don't hammer the client again.
+			local now = Skada._Time or GetTime()
+			if unknown_pets[guid] and now < unknown_pets[guid] then return end
+
+			-- guess the pet from roster. only a complete resolve counts as a
+			-- success: a unit whose guid or name we can't read (owner out of
+			-- range, stale roster) must fall through to the negative cache,
+			-- otherwise we'd rescan the whole roster on every single event.
 			local ownerUnit = GetPetOwnerUnit(guid)
 			if ownerUnit then
-				local ownerGUID = UnitGUID(ownerUnit)
-				guidToOwner[guid] = ownerGUID
-				return ownerGUID, UnitFullName(ownerUnit)
+				local ownerGUID, ownerName = UnitGUID(ownerUnit), UnitFullName(ownerUnit)
+				if ownerGUID and ownerName then
+					guidToOwner[guid] = ownerGUID
+					return ownerGUID, ownerName
+				end
 			end
 
 			-- guess the pet from tooltip.
@@ -1556,6 +1588,13 @@ do
 			if ownerGUID and ownerName then
 				guidToOwner[guid] = ownerGUID
 				return ownerGUID, ownerName
+			end
+
+			-- couldn't resolve the owner: cache the failure.
+			unknown_pets[guid] = now + UNKNOWN_PET_COOLDOWN
+			unknown_count = unknown_count + 1
+			if unknown_count >= UNKNOWN_PET_PRUNE then
+				PruneUnknownPets(now)
 			end
 		end
 
@@ -2304,10 +2343,10 @@ do
 
 	function Skada:SmartStop(set)
 		if
-			not self.profile.smartstop and -- feature disabled?
-			not set or set.stopped and -- no set or already stopped?
-			not set.gotboss and -- not a boss fight?
-			not ignored_creature[set.gotboss] -- an ignored boss fight?
+			not self.profile.smartstop or -- feature disabled?
+			not set or set.stopped or -- no set or already stopped?
+			not set.gotboss or -- not a boss fight?
+			ignored_creature[set.gotboss] -- an ignored boss fight?
 		then
 			return
 		end

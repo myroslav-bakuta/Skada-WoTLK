@@ -389,7 +389,7 @@ Skada:RegisterModule("Sunder Counter", function(L, P, _, C, M, O)
 	get_actor_sunder_targets = function(self, name, id, tbl)
 		local actor = self:GetActor(name, id)
 		local total = actor and actor.sunder
-		if not actor.sundertargets then return end
+		if not total or not actor.sundertargets then return end
 
 		tbl = clear(tbl or C)
 		for targetname, count in pairs(actor.sundertargets) do

@@ -326,7 +326,8 @@ Skada:RegisterModule("Threat", function(L, P, _, _, M, O)
 		local handlers = {
 			-- Default
 			[1] = function(text, r, g, b, font, size, outline, sticky)
-				if tostring(SHOW_COMBAT_TEXT) ~= "0" then
+				-- CombatText_AddMessage only exists if Blizzard_CombatText is loaded.
+				if CombatText_AddMessage and tostring(SHOW_COMBAT_TEXT) ~= "0" then
 					CombatText_AddMessage(text, CombatText_StandardScroll, r, g, b, sticky and "crit" or nil, false)
 				else
 					UIErrorsFrame:AddMessage(text, r, g, b, 1.0)

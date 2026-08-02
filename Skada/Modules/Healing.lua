@@ -95,11 +95,13 @@ Skada:RegisterModule("Healing", function(L, P)
 		else
 			spell.n_num = (spell.n_num or 0) + 1
 			spell.n_amt = (spell.n_amt or 0) + amount
-			if not spell.n_max or amount > spell.n_max and amount > 0 then
-				spell.n_max = amount
-			end
-			if not spell.n_min or amount < spell.n_min and amount > 0 then
-				spell.n_min = amount
+			if amount > 0 then -- ignore fully overhealed hits for min/max
+				if not spell.n_max or amount > spell.n_max then
+					spell.n_max = amount
+				end
+				if not spell.n_min or amount < spell.n_min then
+					spell.n_min = amount
+				end
 			end
 		end
 
@@ -1206,7 +1208,7 @@ Skada:RegisterModule("Healing Taken", function(L, P)
 		local total = 0
 
 		for _, source in pairs(sources) do
-			local spells = (not actor.enemy or self.arena) and source.absorbspells -- absorb spells
+			local spells = (not source.enemy or self.arena) and source.absorbspells -- absorb spells
 			if spells then
 				for spellid, spell in pairs(spells) do
 					local amount = spell.targets and spell.targets[name]
@@ -1248,7 +1250,7 @@ Skada:RegisterModule("Healing Taken", function(L, P)
 		return tbl, total, actor
 	end
 
-	get_actor_heal_spell_sources = function(self, name, id, spellid)
+	get_actor_heal_spell_sources = function(self, name, id, spellid, tbl)
 		local sources = spellid and self.actors
 		local actor = sources and self:GetActor(name, id)
 		if not actor then return end

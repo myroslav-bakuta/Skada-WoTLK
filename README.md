@@ -1,78 +1,91 @@
-# Skada for Wrath of the Lich King `3.3.5` (_Revisited - v1.8.86_)
+# Skada WotLK (mod by Kappa)
 
-![Discord](https://img.shields.io/discord/795698054371868743?label=discord)
-![GitHub last commit](https://img.shields.io/github/last-commit/bkader/Skada-WoTLK)
-![GitHub tag (latest by date)](https://img.shields.io/github/v/tag/bkader/Skada-WoTLK?label=version)
+A maintenance fork of [Skada Revisited](https://github.com/bkader/Skada-WoTLK) by Kader (bkader), the modular damage meter for World of Warcraft 3.3.5a (WotLK, Interface 30300).
 
-Skada is a modular damage meter with various viewing modes, segmented fights and customizable windows. It aims to be highly efficient with memory and CPU.
+This fork exists for two reasons: to fix bugs that were still present in the upstream release, and to add a complete Ukrainian localization. Roughly thirty defects were found and fixed, ranging from a performance problem that froze the client for seconds at a time to several latent crashes and a number of incorrect calculations. All fixes are described in detail below.
 
-<p align="center"><img src="https://user-images.githubusercontent.com/4732702/170839578-72a9a952-c999-457a-8f57-7d151e3b76a8.png" alt="Skada WotLK"></p>
+Bug fixes, extensions and the Ukrainian translation by **Kappa**.
 
-_**FOR PRIVATE SERVERS**_:
-* _[Cataclysm](https://github.com/bkader/Skada-Cata)_
-* _[Mists of Pandaria](https://github.com/bkader/Skada-MoP)_
-* _[Warlords of Draenor](https://github.com/bkader/Skada-WoD)_
-* _[Legion](https://github.com/bkader/Skada-Legion)_
-* _[Battle for Azeroth](https://github.com/bkader/Skada-BfA)_
-* _[Shadowlands](https://github.com/bkader/Skada-Shadowlands)_
+## Requirements
 
-_**FOR OFFICIAL SERVERS**_:
-* _[Retail/Classic Wrath](https://github.com/bkader/Skada-Damage-Meter)_
+* World of Warcraft 3.3.5a client (Interface 30300)
+* No other dependencies, all required libraries are bundled
 
-> ***Is this a backported version?***
-> **No**! This is total **rewrite** of the original addon, it all started from version `r301` for `3.3.5`and built up to the current state.
+## Installation
 
-## IMPORTANT: How to install
+Copy the three folders into your `Interface\AddOns\` directory:
 
-1. If you used the default on **Skada** before, please make sure to delete all its files from `Interface\AddOns` folder as well as all its _SavedVariables_ from `WTF` folder (_just delete all `Skada.lua` and `Skada.lua.bak` for this folder. Use the search box for quick delete_). If you are new, skip this step.
-2. [Download the package](https://github.com/bkader/Skada-WoTLK/archive/refs/heads/main.zip).
-3. Open the Zip package inside which you will find a single folder named `Skada-WoTLK-main`.
-4. Extract or drag and drop the unique folder `Skada` into your `Interface\AddOns` folder.
-5. If you want to use `SkadaImprovement` and/or `SkadaStorage` modules, drop them there as well.
+```
+Interface\AddOns\Skada\
+Interface\AddOns\SkadaImprovement\
+Interface\AddOns\SkadaStorage\
+```
 
-## Show Love & Support
+Only `Skada` is enabled by default. `SkadaImprovement` and `SkadaStorage` ship with `DefaultState: disabled`, so enable them in the character selection AddOns list if you want them:
 
-Though it's not required, **PayPal**/**Paysera** donations are most welcome at **bkader[at]mail.com**.
+* **SkadaImprovement** records your own boss fight statistics over time so you can compare your performance across attempts.
+* **SkadaStorage** keeps combat segments in saved variables so they survive a logout, and warns you when memory usage grows too large.
 
-## Special Credits
+## Ukrainian localization
 
-* Original author: **Zarnivoop**
-* Localization: **meatgaga** (CN), **Ícar** & **Septimun** (ES), **Kader** (FR), **NGL** (RU)
-* Direct and indirect contributors: **Abel**, **Iqui**, **Jeb**, **Shoggoth**, **Havi** & **Ganrod**, **WotLK Community**.
-* The man behind the wheel: **[Nomadra](https://github.com/ridepad)**
+The addon is displayed in Ukrainian by default. The translation is complete: all 809 strings are covered, with English used as the fallback for anything a future version adds.
 
-## Early Access
+The 3.3.5a client has no `ukUA` game locale, so the usual AceLocale mechanism cannot be used for it. Instead the translations are stored separately and overlaid onto whichever locale the client is running, which means Ukrainian works correctly on an English or Russian client alike.
 
-If like some you cannot wait for updates to be pushed and releases to be published, visit [this link](https://mega.nz/folder/3gZFXa5T#nO6nqnv6gj1IYpCu4CJWaQ) and download the version (_expansion_) you want to use. Every time a progress is done and a milestone is reached, packages are updated, so you might want to check the date files were updated so you don't download the same package again (_compare date added to the in-game Skada date_).
-_Note that **3.4.x.zip** is for both **Retail** and **Classic Wrath**._
+To switch back to the client language, open `/skada config`, go to the General tab and turn off the option under "Мова / Language". The setting is account wide and requires a UI reload, which the addon will prompt for.
 
-## OTHER ADDONS (Private Servers)
+Bundled languages are English, Russian and Ukrainian. The German, Spanish, French, Korean and Chinese translations that shipped upstream were removed. Players on those clients will see English as the base language, with the Ukrainian overlay applied on top unless they disable it.
 
-* **!ElvinCDs**: [https://github.com/bkader/ElvinCDs](https://github.com/bkader/ElvinCDs)
-* **!KTracker**: [https://github.com/bkader/KTracker](https://github.com/bkader/KTracker)
-* **BigWigs**: [https://github.com/bkader/BigWigs-WoTLK](https://github.com/bkader/BigWigs-WoTLK)
-* **BloodyMask**: [https://github.com/bkader/BloodyMask](https://github.com/bkader/BloodyMask)
-* **ButtonFacade**: [https://github.com/bkader/ButtonFacade](https://github.com/bkader/ButtonFacade)
-* **Comix**: [https://github.com/bkader/Comix-WoTLK](https://github.com/bkader/Comix-WoTLK)
-* **Crosshairs**: [https://github.com/bkader/Crosshairs-WotLK](https://github.com/bkader/Crosshairs-WotLK)
-* **Dominos**: [https://github.com/bkader/Dominos](https://github.com/bkader/Dominos)
-* **EclipseBar**: [https://github.com/bkader/EclipseBar-WotLK](https://github.com/bkader/EclipseBar-WotLK)
-* **FixGroups**: [https://github.com/bkader/FixGroups-WoTLK](https://github.com/bkader/FixGroups-WoTLK)
-* **GarbageProtector**: [https://github.com/bkader/GarbageProtector](https://github.com/bkader/GarbageProtector)
-* **Grid2**: [https://github.com/bkader/Grid2-WoTLK](https://github.com/bkader/Grid2-WoTLK)
-* **HalionHelper**: [https://github.com/bkader/HalionHelper-WoTLK](https://github.com/bkader/HalionHelper-WoTLK)
-* **Hermes**: [https://github.com/bkader/Hermes-WotLK](https://github.com/bkader/Hermes-WotLK)
-* **KPack**: [https://github.com/bkader/KPack](https://github.com/bkader/KPack)
-* **KRaidTools**: [https://github.com/bkader/KRT](https://github.com/bkader/KRT)
-* **KRaidUtilities**: [https://github.com/bkader/KRU-WoTLK](https://github.com/bkader/KRU-WoTLK)
-* **KuiNameplates**: [https://github.com/bkader/KuiNameplates-WoTLK](https://github.com/bkader/KuiNameplates-WoTLK)
-* **Masque**: [https://github.com/bkader/Masque-WoTLK](https://github.com/bkader/Masque-WoTLK)
-* **NameplateSCT**: [https://github.com/bkader/NameplateSCT_WoTLK](https://github.com/bkader/NameplateSCT_WoTLK)
-* **PlateBuffs**: [https://github.com/bkader/PlateBuffs_WoTLK](https://github.com/bkader/PlateBuffs_WoTLK)
-* **RUF**: [https://github.com/bkader/RUF-WoTLK](https://github.com/bkader/RUF-WoTLK)
-* **Raven**: [https://github.com/bkader/Raven-WotLK](https://github.com/bkader/Raven-WotLK)
-* **SharedMedia**: [https://github.com/bkader/SharedMedia](https://github.com/bkader/SharedMedia)
-* **Talented**: [https://github.com/bkader/Talented_WoTLK](https://github.com/bkader/Talented_WoTLK)
-* **TellMeWhen**: [https://github.com/bkader/TellMeWhen_3.3.5](https://github.com/bkader/TellMeWhen_3.3.5)
-* **TheClassicRace**: [https://github.com/bkader/TheClassicRace-WotLK](https://github.com/bkader/TheClassicRace-WotLK)
-* **TidyPlates & ThreatPlates**: [https://github.com/bkader/TidyPlates_WoTLK](https://github.com/bkader/TidyPlates_WoTLK)
+## What is changed compared to the original
+
+### Performance
+
+* **Snake Trap and enemy pet freezes are fixed.** This was the most severe problem. When a combat log event arrived from a unit whose owner Skada could not identify, it ran a full raid roster scan followed by a tooltip scan that tested every actor in the segment against every summon pattern, with each test performing an expensive `SetText`/`GetText` round trip on a font string. Successful lookups were cached but failures were not, so an unresolvable unit repeated that entire scan on every single event it generated. A hunter's Snake Trap summons around six guardians that each attack quickly and apply poisons, and an enemy hunter's snakes can never be resolved at all because they are not in your group, which produced freezes lasting several seconds in PvP. Unresolvable GUIDs are now remembered for 30 seconds before being retried, and the cache is pruned periodically so it cannot grow without bound over a long session.
+
+### Crashes
+
+* **Tweaks:** clicking an outdated `SKSP` report link after the corresponding meter was removed raised a Lua error.
+* **Threat:** the module errored when `Blizzard_CombatText` was not loaded.
+* **Comparison:** three nil dereferences when the "absorbed damage" option was enabled.
+* **Absorbs:** `UnitAttackPower` returns nil for players other than yourself, which broke the Savage Defense calculation.
+* **Init:** `SpellLink` errored on spells passed by name, a latent crash reachable through the Interrupts and CCTracker announcements.
+* **SunderCounter, Damage:** missing nil guards on actor and total lookups.
+* **Core:** a typo in `verify_set` would have errored for any module defining `AddPlayerAttributes` or `AddEnemyAttributes`.
+
+### Correctness
+
+* **Windows:** an operator precedence mistake in `set_active` caused visible windows to be hidden when they should have stayed open.
+* **SmartStop:** a broken condition chain made the option do nothing at all and inverted the creature ignore list.
+* **Enemies:** `type(unit.diff == "table")` always evaluated to `"boolean"`, so instance difficulty was never matched correctly. The "Enemy Healing Done" window title also grew endlessly, repeating the class name on each refresh.
+* **Deaths:** the death log entry was keyed by GUID on cleanup but by name on insertion, so it was never cleared after a resurrection and the death aura blocked the next record.
+* **Healing:** a fully overhealed hit recorded a minimum of zero, skewing the minimum healing figure.
+* **Comparison:** blocked damage was labelled `RESIST` instead of `BLOCK`.
+* **Parry:** announcements were duplicated once per boss phase because phase segments were also matched.
+* **Nickname:** the broadcast timer was cancelled with a string instead of the timer handle, so it was never actually cancelled.
+* **Absorbs:** the HPS tooltip used the wrong title template, and the "Healing Done By Spell" tooltip displayed fields that were never populated instead of the real minimum and maximum.
+* **Enemies:** `GetDTPS` was called with three arguments on a two parameter method.
+
+### Memory
+
+* **Global leaks:** an undeclared local in `Init.lua` and a missing function parameter in `Healing.lua` both leaked into the global namespace.
+* **Table pool leaks:** temporary tables were not returned to the pool in `Deaths.lua` and in the Avoidance and Mitigation view of `DamageTaken.lua`.
+* **Shared state:** `setPrototype:Bind` wrote the arena flag onto the shared prototype rather than the individual segment, so the flag leaked between segments.
+
+### Housekeeping
+
+* Version raised to 1.9.0 and declared consistently in all three addons. The two plugins previously had no version field at all.
+* `X-Curse-Project-ID` removed, since this fork is not connected to the upstream Curse project.
+
+## Not audited
+
+The work above concentrated on the core and the feature modules. The following were not reviewed in depth and may still contain issues: `Core/Display/*` (Bar, Inline, Broker, Legacy), `Options.lua`, `Menus.lua`, and the bundled third party libraries in `Libs/`.
+
+One deliberate non change is worth recording: in `Modules/Resurrects.lua` the `SPELL_RESURRECT` registration uses the `src_is_not_interesting` flag, which looks suspicious but is plausibly intentional, since changing it blindly risks counting every resurrection twice.
+
+## Credits
+
+* **Zarnivoop**, author of the original Skada.
+* **Kader (bkader)**, author of Skada Revisited, the fork this is based on.
+* **Kappa**, bug fixes, extensions and Ukrainian localization.
+
+Licensed under MIT/X, same as upstream.

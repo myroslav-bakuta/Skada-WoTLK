@@ -1040,8 +1040,11 @@ Skada:RegisterModule("Avoidance & Mitigation", function(L)
 					d.value = 100 * avoid / count
 					fmt_valuetext(d, mode_cols, count, avoid, win.metadata)
 					win:color(d, set, actor.enemy)
-				elseif C[actor.id] then
-					C[actor.id] = del(C[actor.id])
+				else
+					tmp = del(tmp, true) -- return unused table to the pool
+					if C[actor.id] then
+						C[actor.id] = del(C[actor.id])
+					end
 				end
 			end
 		end

@@ -4,12 +4,27 @@ local GetAddOnMetadata = GetAddOnMetadata
 ns.author = GetAddOnMetadata(folder, "Author")
 ns.version = GetAddOnMetadata(folder, "Version")
 ns.date = GetAddOnMetadata(folder, "X-Date")
-ns.website = "https://github.com/bkader/Skada-WoTLK"
+ns.website = "https://github.com/myroslav-bakuta/Skada-WoTLK"
 ns.logo = [[Interface\ICONS\spell_lightning_lightningbolt01]]
 ns.revisited = true -- Skada-Revisited flag
 ns.Private = {} -- holds private stuff
 ns.Locale = LibStub("AceLocale-3.0"):GetLocale(folder)
 ns.callbacks = LibStub("CallbackHandler-1.0"):New(ns)
+
+-- Ukrainian language (account-wide, ON by default). The 3.3.5a client has no
+-- ukUA locale, so rather than relying on AceLocale's game-locale gating we
+-- overlay our own translations (Locales\ukUA.lua) onto the active locale table.
+-- It's applied unless the user explicitly turned it off in the options: we read
+-- straight from the raw saved variable because AceDB hasn't wrapped it (nor
+-- applied its defaults) yet at this point of the load, so nil means "default on".
+if ns.ukLocale then
+	if not (SkadaDB and SkadaDB.global and SkadaDB.global.uklang == false) then
+		for key, value in pairs(ns.ukLocale) do
+			ns.Locale[key] = value
+		end
+	end
+	ns.ukLocale = nil -- release the table, it's no longer needed
+end
 
 -- cache frequently used globals
 local pairs, ipairs = pairs, ipairs
@@ -27,7 +42,7 @@ ns.mediapath = format([[Interface\AddOns\%s\Media]], folder)
 -- options table
 ns.options = {
 	type = "group",
-	name = format("%s \124cffffffff%s\124r", folder, ns.version),
+	name = "Skada (\124cffb57edcmod by Kappa\124r)",
 	get = true,
 	set = true,
 	args = {}
@@ -613,7 +628,7 @@ function Private.RegisterSchools()
 	add_school(SCHOOL_ARCANE, STRING_SCHOOL_ARCANE, 1, 0.5, 1) -- Arcane
 
 	-- reference to CombatLog_String_SchoolString
-	local colorFunc = CombatLog_Color_ColorArrayBySchool
+	local nameFunc = CombatLog_String_SchoolString
 	local function get_school_name(key)
 		if not nameFunc then -- late availability
 			nameFunc = CombatLog_String_SchoolString
@@ -799,7 +814,7 @@ function Private.tremove(t, index)
 	if index then
 		return tremove(t, index)
 	elseif type(t) ~= "table" then
-		error("bad argument #1 to 'tremove' (table expected, got number)")
+		error(format("bad argument #1 to 'tremove' (table expected, got %s)", type(t)))
 	end
 
 	local n = #t
@@ -1412,7 +1427,7 @@ do
 	local strfind = string.find
 	-- used to split spell: [id].[school].[petname]
 	local function SpellSplit(spellid)
-		if type(spellid) == "string" and strfind(spellid, ".") then
+		if type(spellid) == "string" and strfind(spellid, ".", 1, true) then
 			local id, school, petname = strsplit(".", spellid, 3)
 			return tonumber(id), tonumber(school), petname
 		end
@@ -1439,7 +1454,8 @@ do
 
 	function Private.SpellLink(spellid)
 		if not customSpells[spellid] then
-			return GetSpellLink(math_abs(spellid))
+			-- spell names are valid input for GetSpellLink as well.
+			return GetSpellLink(tonumber(spellid) and math_abs(spellid) or spellid)
 		end
 	end
 
@@ -1745,7 +1761,9 @@ do
 			self.__index = self
 			bind_set_actors(obj.actors)
 		end
-		self.arena = (ns.forPVP and obj and obj.type == "arena")
+		if obj then -- per-set flag (never store shared state on the prototype)
+			obj.arena = (ns.forPVP and obj.type == "arena") or nil
+		end
 		return obj
 	end
 
@@ -1855,12 +1873,12 @@ do
 	-- deletes a window and recycles its tables
 	local del = Private.delTable
 	function Window.del(win)
-		win.super = nil
 		win.dataset = del(win.dataset)
-		if not win.super then
+		if not win.super then -- child windows don't own history/metadata
 			win.history = del(win.history)
 			win.metadata = del(win.metadata)
 		end
+		win.super = nil
 		if win.ttwin then -- tooltip
 			win.ttwin = Window.del(win.ttwin)
 		end

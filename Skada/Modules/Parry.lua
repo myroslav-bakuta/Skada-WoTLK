@@ -46,7 +46,8 @@ Skada:RegisterModule("Parry-Haste", function(L, P, _, _, M, O)
 		actor.parrytargets = actor.parrytargets or {}
 		actor.parrytargets[dstName] = (actor.parrytargets[dstName] or 0) + 1
 
-		if M.parryannounce and set ~= Skada.total then
+		-- only announce once (current set): DispatchSets also feeds total/phase sets.
+		if M.parryannounce and set == Skada.current then
 			Skada:SendChat(format(L["%s parried %s (%s)"], dstName, actorname, actor.parrytargets[dstName] or 1), M.parrychannel, "preset")
 		end
 	end

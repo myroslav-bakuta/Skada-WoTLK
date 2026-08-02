@@ -308,6 +308,9 @@ Skada:RegisterModule("Deaths", function(L, P, _, _, M, O)
 				death_timers = del(death_timers)
 			end
 		end
+		if t.__temp then -- table created by sor_applied
+			t = del(t)
+		end
 	end
 
 	local function sor_applied(t)
@@ -316,6 +319,7 @@ Skada:RegisterModule("Deaths", function(L, P, _, _, M, O)
 			args.dstGUID = t.dstGUID
 			args.dstName = t.dstName
 			args.dstFlags = t.dstFlags
+			args.__temp = true -- freed by unit_died
 
 			death_timers = death_timers or new()
 			death_timers[t.dstGUID] = Skada:ScheduleTimer(unit_died, 0.01, args)
@@ -349,7 +353,7 @@ Skada:RegisterModule("Deaths", function(L, P, _, _, M, O)
 			data.aura = nil
 			data.remove = nil
 
-			dead[data.actorid] = nil
+			dead[data.actorname] = nil -- "dead" is keyed by name (see unit_died)
 			Skada:DispatchSets(log_deathlog, true)
 		end
 	end

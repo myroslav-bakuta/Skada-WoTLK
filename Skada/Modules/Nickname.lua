@@ -367,7 +367,7 @@ Skada:RegisterModule("Nickname", function(L, P, G, _, _, O)
 		end
 
 		if self.nicknameTimer then
-			Skada.CancelTimer(self, "SendNickname", true)
+			Skada.CancelTimer(self, self.nicknameTimer, true) -- CancelTimer expects the timer handle
 			self.nicknameTimer = nil
 		end
 

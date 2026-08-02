@@ -345,6 +345,8 @@ L["Are you sure you want to reinstall Skada?"] = true
 -- general options
 L["Show minimap button"] = true
 L["Toggles showing the minimap button."] = true
+L["Ukrainian language"] = true
+L["opt_uklang_desc"] = "Displays the addon in Ukrainian. Requires a UI reload to take effect."
 L["Transliterate"] = true
 L["Converts Cyrillic letters into Latin letters."] = true
 L["Remove realm name"] = true

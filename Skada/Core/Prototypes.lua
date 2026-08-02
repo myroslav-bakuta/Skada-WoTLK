@@ -25,8 +25,10 @@ function setPrototype:GetActorTime(name, id, active)
 end
 
 -- attempts to find an actor (player or enemy)
-function setPrototype:GetActor(name, id, no_strict)
-	return Skada:FindActor(self, name, id, no_strict)
+-- NOTE: the 3rd argument is passed to FindActor as "is_strict":
+-- true = no dummy/fallback actor is returned if not found.
+function setPrototype:GetActor(name, id, strict)
+	return Skada:FindActor(self, name, id, strict)
 end
 
 do
@@ -70,9 +72,9 @@ do
 end
 
 -- fills the give table with actor's details
-function setPrototype:_fill_actor_table(t, name, actortime, no_strict)
+function setPrototype:_fill_actor_table(t, name, actortime, strict)
 	if t and (not t.class or (actortime and not t.time)) then
-		local actor = self:GetActor(name, name, no_strict)
+		local actor = self:GetActor(name, name, strict)
 		if not actor then return end
 
 		t.id = t.id or actor.id

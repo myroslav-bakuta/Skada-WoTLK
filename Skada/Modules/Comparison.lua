@@ -170,7 +170,6 @@ Skada:RegisterModule("Comparison", function(L, P)
 		end
 	end
 
-	-- local nr = add_detail_bar(win, 0, L["Hits"], spell.count, ospell.count)
 	local function add_detail_bar(win, nr, title, value, ovalue, fmt, disabled)
 		nr = nr + 1
 		local d = win:nr(nr)
@@ -402,7 +401,7 @@ Skada:RegisterModule("Comparison", function(L, P)
 			local b_amt1 = spell and spell.b_amt
 			local b_amt2 = ospell and ospell.b_amt
 			if (b_amt1 and b_amt1 > 0) or (b_amt2 and b_amt2 > 0) then
-				nr = add_detail_bar(win, nr, L["RESIST"], b_amt1, b_amt2, true)
+				nr = add_detail_bar(win, nr, L["BLOCK"], b_amt1, b_amt2, true)
 			end
 
 			-- overkill damage
@@ -446,9 +445,10 @@ Skada:RegisterModule("Comparison", function(L, P)
 		if actor.id == otherid then
 			win.title = uformat(L["%s's spells on %s"], classfmt(win.actorclass, win.actorname), classfmt(win.targetclass, win.targetname))
 
-			local total = targets[win.targetname] and targets[win.targetname].amount
-			if P.absdamage and targets[win.targetname].total then
-				total = targets[win.targetname].total
+			local target = targets[win.targetname]
+			local total = target and target.amount
+			if P.absdamage and target and target.total then
+				total = target.total
 			end
 
 			local spells = (total and total > 0) and actor.damagespells
@@ -481,9 +481,10 @@ Skada:RegisterModule("Comparison", function(L, P)
 		local otargets, _, oactor = set:GetActorDamageTargets(othername, otherid, C)
 
 		-- the compared actor
-		local total = targets[win.targetname] and targets[win.targetname].amount
-		if P.absdamage and targets[win.targetname].total then
-			total = targets[win.targetname].total
+		local target = targets[win.targetname]
+		local total = target and target.amount
+		if P.absdamage and target and target.total then
+			total = target.total
 		end
 
 		-- existing targets.
@@ -540,9 +541,10 @@ Skada:RegisterModule("Comparison", function(L, P)
 
 		-- unexisting targets.
 		if not otargets then return end
-		total = otargets[win.targetname] and otargets[win.targetname].amount
-		if P.absdamage and otargets[win.targetname].total then
-			total = otargets[win.targetname].total
+		local otarget = otargets[win.targetname]
+		total = otarget and otarget.amount
+		if P.absdamage and otarget and otarget.total then
+			total = otarget.total
 		end
 
 		spells = (total and total > 0) and oactor.damagespells

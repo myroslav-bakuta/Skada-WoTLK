@@ -304,6 +304,14 @@ local function summon_pet(petGUID, ownerGUID)
 	local guidOrClass = guidToClass[ownerGUID]
 	ownerGUID = guidToClass[guidOrClass] and guidOrClass or ownerGUID
 	guidToOwner[petGUID] = ownerGUID
+
+	-- "totem > elemental" can arrive before "shaman > totem", leaving the
+	-- elemental owned by the totem. re-point whatever this pet owns.
+	for guid, owner in next, guidToOwner do
+		if owner == petGUID then
+			guidToOwner[guid] = ownerGUID
+		end
+	end
 end
 
 local dismiss_pet
@@ -2529,6 +2537,15 @@ end
 
 -------------------------------------------------------------------------------
 
+-- true if a tracked pet/guardian is still generating combat log activity.
+-- IsGroupInCombat only walks unit ids, and guardians own none, so a segment
+-- fed purely by guardian damage would be ended while the pet is still hitting.
+local PET_COMBAT_GRACE = 3 -- seconds of silence before we let the segment end
+local function pets_in_combat()
+	if not next(guidToOwner) or not Skada._Time then return false end
+	return (GetTime() - Skada._Time) < PET_COMBAT_GRACE
+end
+
 -- never initially registered.
 function Skada:PLAYER_REGEN_ENABLED()
 	self:UnregisterEvent("PLAYER_REGEN_ENABLED")
@@ -2537,7 +2554,7 @@ function Skada:PLAYER_REGEN_ENABLED()
 	-- we make sure to end the segment only if:
 	-- 	1. the segment was previously stopped.
 	-- 	2. the player and the group aren't in combat
-	if self.current.stopped or (not InCombatLockdown() and not IsGroupInCombat()) then
+	if self.current.stopped or (not InCombatLockdown() and not IsGroupInCombat() and not pets_in_combat()) then
 		self:Debug("\124cffffbb00EndSegment\124r: PLAYER_REGEN_ENABLED")
 		combat_end()
 	end
@@ -2815,7 +2832,7 @@ do
 
 	local function combat_tick()
 		Skada._time = time()
-		if not Skada.disabled and Skada.current and not InCombatLockdown() and not IsGroupInCombat() and Skada.insType ~= "pvp" and Skada.insType ~= "arena" then
+		if not Skada.disabled and Skada.current and not InCombatLockdown() and not IsGroupInCombat() and not pets_in_combat() and Skada.insType ~= "pvp" and Skada.insType ~= "arena" then
 			Skada:Debug("\124cffffbb00EndSegment\124r: Combat Tick")
 			combat_end()
 		end
@@ -3061,8 +3078,9 @@ do
 			end
 		end
 
-		-- pet summons.
-		if t.event == "SPELL_SUMMON" and t:SourceInGroup() and t:DestIsPet() then
+		-- pet summons. the source may be a known guardian itself, since a
+		-- shaman's chain is player > totem > elemental.
+		if t.event == "SPELL_SUMMON" and (t:SourceInGroup() or guidToOwner[t.srcGUID]) and t:DestIsPet() then
 			summon_pet(t.dstGUID, t.srcGUID)
 		-- pet died?
 		elseif death_events[t.event] and guidToOwner[t.dstGUID] then
@@ -3118,7 +3136,14 @@ do
 
 			if not fail then
 				if tentative ~= nil then
-					tentative = tentative + 1
+					-- a group pet landing a hit is deliberate, not the stray
+					-- tick this window guards against. guardians swing about
+					-- once every 2s and never reach 5 events within it.
+					if t:SourceIsPet(true) then
+						tentative = 5
+					else
+						tentative = tentative + 1
+					end
 					self:Debug(format("\124cffffbb00Tentative\124r: %s (%d)", t.event, tentative))
 					if tentative >= 5 then
 						self:CancelTimer(tentative_timer, true)

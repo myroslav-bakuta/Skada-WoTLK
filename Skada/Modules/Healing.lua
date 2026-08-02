@@ -86,11 +86,13 @@ Skada:RegisterModule("Healing", function(L, P)
 		if heal.critical then
 			spell.c_num = (spell.c_num or 0) + 1
 			spell.c_amt = (spell.c_amt or 0) + amount
-			if not spell.c_max or amount > spell.c_max then
-				spell.c_max = amount
-			end
-			if not spell.c_min or amount < spell.c_min then
-				spell.c_min = amount
+			if amount > 0 then -- ignore fully overhealed hits for min/max
+				if not spell.c_max or amount > spell.c_max then
+					spell.c_max = amount
+				end
+				if not spell.c_min or amount < spell.c_min then
+					spell.c_min = amount
+				end
 			end
 		else
 			spell.n_num = (spell.n_num or 0) + 1

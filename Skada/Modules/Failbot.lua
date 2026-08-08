@@ -10,7 +10,7 @@ Skada:RegisterModule("Fails", function(L, P, _, _, M, O)
 	local ignored_spells = Skada.ignored_spells.fail -- Edit Skada\Core\Tables.lua
 	local count_fails_by_spell = nil
 
-	local pairs, tostring, format, UnitGUID = pairs, tostring, string.format, UnitGUID
+	local pairs, tostring, tonumber, format, UnitGUID = pairs, tostring, tonumber, string.format, UnitGUID
 	local uformat, IsInGroup = Private.uformat, Skada.IsInGroup
 	local classfmt = Skada.classcolors.format
 	local tank_events, mode_cols
@@ -100,7 +100,7 @@ Skada:RegisterModule("Fails", function(L, P, _, _, M, O)
 		for spellid, count in pairs(spells) do
 			nr = nr + 1
 
-			local d = win:spell(nr, spellid)
+			local d = win:spell(nr, tonumber(spellid) or spellid)
 			d.value = count
 			format_valuetext(d, total, win.metadata, true)
 		end

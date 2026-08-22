@@ -2988,8 +2988,11 @@ do
 
 		-- boss already detected?
 		if set.gotboss then
-			-- default boss defeated event? (no DBM/BigWigs)
-			if not Skada.bossmod and death_events[t.event] and set.gotboss == GetCreatureId(t.dstGUID) then
+			-- boss defeated event. this runs even with DBM/BigWigs around:
+			-- they match the boss by name, which fails on renamed or custom
+			-- creatures, while this goes by creature id. whichever fires
+			-- first wins, the other one bails out on set.success.
+			if death_events[t.event] and set.gotboss == GetCreatureId(t.dstGUID) then
 				bossdefeat_timer = bossdefeat_timer or Skada:ScheduleTimer(BossDefeated, 0.1)
 			end
 			return

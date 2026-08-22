@@ -44,7 +44,7 @@ jobs:
   lint:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
       - name: Install Lua 5.1 and luacheck
         run: |
@@ -81,7 +81,7 @@ jobs:
     outputs:
       version: ${{ steps.version.outputs.version }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
         with:
           # Release notes need the tag history, which a shallow clone omits.
           fetch-depth: 0
@@ -165,7 +165,7 @@ jobs:
           echo "artifact=$artifact" >> "$GITHUB_OUTPUT"
           ls -lh "$name.zip"
 
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         with:
           name: ${{ steps.package.outputs.artifact }}
           path: ${{ steps.package.outputs.name }}.zip

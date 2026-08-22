@@ -2993,25 +2993,23 @@ do
 		end
 
 		-- marking set as boss fights relies only on src_is_interesting
+		-- _targets caches the names already ruled out, so every distinct
+		-- target is run through IsEncounter exactly once, whatever the order.
 		if trigger_events[t.event] and src_is_interesting and not t:DestIsFriendly() then
-			if set.gotboss == nil then
-				if not _targets or not _targets[t.dstName] then
-					local isboss, bossid, bossname = Skada:IsEncounter(t.dstGUID, t.dstName)
-					if isboss then -- found?
-						set.mobname = bossname or set.mobname or t.dstName
-						set.gotboss = bossid or true
-						Skada:SendMessage("COMBAT_ENCOUNTER_START", set)
-						Skada:PrintFirstHit()
-						_targets = del(_targets)
-					else
-						_targets = _targets or new()
-						_targets[t.dstName] = true
-						set.gotboss = false
-					end
+			if not _targets or not _targets[t.dstName] then
+				local isboss, bossid, bossname = Skada:IsEncounter(t.dstGUID, t.dstName)
+				if isboss then -- found?
+					set.mobname = bossname or set.mobname or t.dstName
+					set.gotboss = bossid or true
+					Skada:SendMessage("COMBAT_ENCOUNTER_START", set)
+					Skada:PrintFirstHit()
+					_targets = del(_targets)
+				else
+					_targets = _targets or new()
+					_targets[t.dstName] = true
+					set.gotboss = false
+					Skada:Debug(format("\124cffffbb00Boss Check\124r: %s (%s) - no match", t.dstName or "?", GetCreatureId(t.dstGUID) or 0))
 				end
-			elseif _targets and not _targets[t.dstName] then
-				_targets[t.dstName] = true
-				set.gotboss = nil
 			end
 		end
 	end

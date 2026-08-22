@@ -51,6 +51,13 @@ ignore = {
 }
 
 globals = {
+	-- SavedVariables: the client creates these from the .toc files,
+	-- so luacheck cannot see where they are defined.
+	"SkadaDB",
+	"SkadaCharDB",
+	"SkadaImprovementDB",
+	"SkadaStorageDB",
+
 	"ACHIEVEMENTFRAME_SUBFRAMES",
 	"ACHIEVEMENTUI_CATEGORIES",
 	"ACHIEVEMENTUI_DEFAULTSUMMARYACHIEVEMENTS",

@@ -648,7 +648,7 @@ options.args.generaloptions = {
 					name = L["Segments to keep"],
 					desc = L["The number of fight segments to keep. Persistent segments are not included in this."],
 					min = 0,
-					max = 25,
+					max = 50,
 					step = 1,
 					order = 210
 				},

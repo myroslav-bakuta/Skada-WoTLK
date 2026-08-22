@@ -2413,7 +2413,7 @@ function Skada:OnInitialize()
 	self:RegisterComms(not P.syncoff)
 
 	-- fix things and remove others
-	P.setstokeep = min(25, max(0, P.setstokeep or 0))
+	P.setstokeep = min(50, max(0, P.setstokeep or 0))
 	P.setslimit = min(50, max(0, P.setslimit or 0))
 	P.timemesure = min(2, max(1, P.timemesure or 0))
 	P.totalflag = P.totalflag or 0x10

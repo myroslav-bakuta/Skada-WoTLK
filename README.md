@@ -2,7 +2,7 @@
 
 A maintenance fork of [Skada Revisited](https://github.com/bkader/Skada-WoTLK) by Kader (bkader), the modular damage meter for World of Warcraft 3.3.5a (WotLK, Interface 30300).
 
-This fork exists for two reasons: to fix bugs that were still present in the upstream release, and to add a complete Ukrainian localization. Roughly thirty defects were found and fixed, ranging from a performance problem that froze the client for seconds at a time to several latent crashes and a number of incorrect calculations. All fixes are described in detail below.
+This fork exists for two reasons: to fix bugs that were still present in the upstream release, and to add a complete Ukrainian localization. More than thirty defects were found and fixed, ranging from a performance problem that froze the client for seconds at a time to several latent crashes and a number of incorrect calculations. All fixes are described in detail below.
 
 Bug fixes, extensions and the Ukrainian translation by **Kappa**.
 
@@ -37,6 +37,13 @@ To switch back to the client language, open `/skada config`, go to the General t
 Bundled languages are English, Russian and Ukrainian. The German, Spanish, French, Korean and Chinese translations that shipped upstream were removed. Players on those clients will see English as the base language, with the Ukrainian overlay applied on top unless they disable it.
 
 ## What is changed compared to the original
+
+### Boss fights
+
+* **Detection:** whether a fight was recognized as a boss fight depended on the order targets were hit in. Adds or trash struck before or alongside the boss often left the fight unrecognized, and the option that keeps only boss fights then discarded the segment.
+* **Kills:** an installed boss mod switched off Skada's own kill detection. DBM and BigWigs identify the boss by name, so nothing was recorded on servers where bosses are renamed. Skada now detects kills itself and a boss mod is optional.
+* **Multi-boss encounters:** Thaddius, Kologarn, Auriaya, Yogg-Saron and the Northrend Beasts were saved as wipes unless a boss mod reported the kill.
+* **Segments:** a discarded segment could be reused while Skada still pointed at it, which left an empty fight in the window title.
 
 ### Performance
 
@@ -74,7 +81,7 @@ Bundled languages are English, Russian and Ukrainian. The German, Spanish, Frenc
 
 ### Housekeeping
 
-* Version raised to 1.9.0 and declared consistently in all three addons. The two plugins previously had no version field at all.
+* Version declared consistently in all three addons, currently 1.9.2. The two plugins previously had no version field at all.
 * `X-Curse-Project-ID` removed, since this fork is not connected to the upstream Curse project.
 
 ## Not audited

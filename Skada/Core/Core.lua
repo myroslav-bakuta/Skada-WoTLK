@@ -203,11 +203,11 @@ local function check_set_name(set)
 end
 
 -- process the given set and stores into sv.
+-- returns the set if it survived, nil if it was recycled.
 local tinsert = table.insert
 local function process_set(set, curtime, mobname)
 	if not set then
-		set = delete_set(set) -- just in case
-		return
+		return delete_set(set) -- just in case
 	end
 
 	curtime = curtime or time()
@@ -241,15 +241,17 @@ local function process_set(set, curtime, mobname)
 			tinsert(Skada.sets, 1, set)
 			Skada:Debug(format("Segment Saved: \124cffffbb00%s\124r", set.name))
 		else
-			set = delete_set(set)
+			return delete_set(set)
 		end
 	end
 
 	-- the segment didn't have the chance to get saved
-	if set and set.endtime == nil then
+	if set.endtime == nil then
 		set.endtime = curtime
 		set.time = max(1, set.endtime - set.starttime)
 	end
+
+	return set
 end
 
 local function clean_sets(force)
@@ -2604,12 +2606,13 @@ function combat_end()
 		Skada:SendMessage("COMBAT_PVP_END", nil, Skada.insType)
 	end
 
-	-- process segment
-	process_set(Skada.current, curtime)
+	-- process segment; nil means it was discarded and recycled,
+	-- so nothing below may touch Skada.current again.
+	local last_set = process_set(Skada.current, curtime)
 
 	-- process phase segments
 	if Skada.tempsets then
-		local setname = Skada.current.name
+		local setname = last_set and last_set.name
 		for i = 1, #Skada.tempsets do
 			local set = Skada.tempsets[i]
 			process_set(set, curtime, setname)
@@ -2637,11 +2640,11 @@ function combat_end()
 		end
 	end
 
-	if Skada.current.time and (P.inCombat or Skada.current.time >= P.minsetlength) then
-		Skada.total.time = (Skada.total.time or 0) + Skada.current.time
+	if last_set and last_set.time and (P.inCombat or last_set.time >= P.minsetlength) then
+		Skada.total.time = (Skada.total.time or 0) + last_set.time
 	end
 
-	Skada.last = Skada.current
+	Skada.last = last_set
 	Skada.current = nil
 	Skada.inCombat = false
 	_targets = del(_targets)

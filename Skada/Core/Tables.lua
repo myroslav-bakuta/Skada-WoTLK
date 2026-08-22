@@ -711,6 +711,22 @@ ns.creature_to_boss = {
 	[33670] = 33350, -- Aerial Command Unit > Mimiron
 }
 
+-------------------------------------------------------------------------------
+-- fight_to_boss
+-- for multi-creature encounters, the creature whose death ends the fight.
+-- without it Skada:IsEncounter can only report "some boss" (true) and the
+-- built-in defeat check (set.gotboss == creature id) can never match, so the
+-- segment stays flagged as a wipe unless DBM/BigWigs reports the kill.
+-- only encounters with a single, unambiguous last kill belong here.
+
+ns.fight_to_boss = {
+	[L["Thaddius"]] = 15928, -- Thaddius (after Feugen & Stalagg)
+	[L["Kologarn"]] = 32930, -- Kologarn (arms respawn)
+	[L["Auriaya"]] = 33515, -- Auriaya (after Sentries & Feral Defender)
+	[L["Yogg-Saron"]] = 33288, -- Yogg-Saron (after Brain & Guardians)
+	[L["The Northrend Beasts"]] = 34797 -- Icehowl, always the last of the three
+}
+
 -- use LibBossIDs-1.0 as backup plan
 local LBI = LibStub("LibBossIDs-1.0")
 setmetatable(ns.creature_to_boss, {__index = LBI.BossIDs})

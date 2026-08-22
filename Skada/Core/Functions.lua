@@ -542,6 +542,7 @@ end
 do
 	local creature_to_fight = Skada.creature_to_fight or Skada.dummyTable
 	local creature_to_boss = Skada.creature_to_boss or Skada.dummyTable
+	local fight_to_boss = Skada.fight_to_boss or Skada.dummyTable
 	local GetCreatureId = Skada.GetCreatureId
 
 	-- checks if the provided guid is a boss
@@ -566,7 +567,9 @@ do
 			end
 
 			if creature_to_fight[id] then
-				return true, true, creature_to_fight[id] or name
+				-- report the fight's last kill when we know it, so the defeat
+				-- check has a creature id to match; true otherwise, as before.
+				return true, fight_to_boss[creature_to_fight[id]] or true, creature_to_fight[id] or name
 			end
 
 			return true, id, creature_to_fight[id] or name

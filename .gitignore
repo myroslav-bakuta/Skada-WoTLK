@@ -2,6 +2,9 @@
 *
 
 !.gitignore
+!.github
+!.github/**
+.github/scripts/__pycache__/
 !README.md
 !Skada
 !Skada/**

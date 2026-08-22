@@ -1,0 +1,179 @@
+name: build
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "Skada/**"
+      - "SkadaImprovement/**"
+      - "SkadaStorage/**"
+      - ".github/workflows/build.yml"
+      - ".github/scripts/**"
+      - ".luacheckrc"
+  pull_request:
+    branches: [main]
+    paths:
+      - "Skada/**"
+      - "SkadaImprovement/**"
+      - "SkadaStorage/**"
+      - ".github/workflows/build.yml"
+      - ".github/scripts/**"
+      - ".luacheckrc"
+  workflow_dispatch:
+    inputs:
+      release:
+        description: "Build a release?"
+        type: choice
+        options: ["no", "yes"]
+        default: "no"
+        required: true
+      version:
+        description: "Version tag, e.g. v1.9.3 (release only; blank = version from Skada.toc)"
+        type: string
+        required: false
+
+concurrency:
+  group: build-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: write
+
+jobs:
+  # Fast feedback on every push: does the addon still lint?
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Lua 5.1 and luacheck
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y lua5.1 luarocks
+          sudo luarocks install luacheck
+
+      - name: Luacheck
+        run: luacheck . -q
+
+  build:
+    needs: lint
+    runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.version.outputs.version }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          # Release notes need the tag history, which a shallow clone omits.
+          fetch-depth: 0
+
+      - name: Install Lua 5.1
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y lua5.1
+
+      - name: Resolve version
+        id: version
+        run: |
+          toc_version="$(sed -n 's/^## Version:[[:space:]]*//p' Skada/Skada.toc | head -1)"
+          if [ -z "$toc_version" ]; then
+            echo "::error::no '## Version:' found in Skada/Skada.toc"
+            exit 1
+          fi
+
+          # Every addon folder must agree on the version, or the release is inconsistent.
+          for toc in SkadaImprovement/SkadaImprovement.toc SkadaStorage/SkadaStorage.toc; do
+            other="$(sed -n 's/^## Version:[[:space:]]*//p' "$toc" | head -1)"
+            if [ "$other" != "$toc_version" ]; then
+              echo "::error::version mismatch: Skada.toc is $toc_version but $toc is $other"
+              exit 1
+            fi
+          done
+
+          version="${{ inputs.version }}"
+          version="${version:-v$toc_version}"
+          case "$version" in v*) ;; *) version="v$version" ;; esac
+
+          if [ "${{ inputs.release }}" = "yes" ] && [ -n "${{ inputs.version }}" ] && [ "$version" != "v$toc_version" ]; then
+            echo "::error::requested $version but the .toc files say v$toc_version -- bump the .toc files first"
+            exit 1
+          fi
+
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+          echo "Building $version"
+
+      - name: Stage addon folders
+        run: |
+          mkdir -p dist
+          for folder in Skada SkadaImprovement SkadaStorage; do
+            cp -r "$folder" dist/
+          done
+
+      - name: Strip comments and blank lines
+        run: |
+          # Bundled libraries are left byte-for-byte alone: they are upstream
+          # code, and rewriting them only makes diffing against upstream harder.
+          mapfile -t targets < <(find dist -name "*.lua" -not -path "*/Libs/*")
+          echo "Minifying ${#targets[@]} files (bundled Libs untouched)."
+          python3 .github/scripts/minify_lua.py "${targets[@]}"
+
+      - name: Verify every Lua file still compiles
+        run: |
+          failed=0
+          while IFS= read -r f; do
+            if ! luac5.1 -p "$f" 2>/dev/null && ! luac -p "$f" 2>/dev/null; then
+              echo "::error file=$f::does not compile after minification"
+              failed=1
+            fi
+          done < <(find dist -name "*.lua")
+          [ "$failed" -eq 0 ] || exit 1
+          echo "All Lua files compile under 5.1."
+
+      - name: Package
+        id: package
+        run: |
+          name="Skada-${{ steps.version.outputs.version }}"
+
+          # The .toc version does not change between PRs, so tag
+          # non-release artifacts with the commit to keep them distinct.
+          if [ "${{ github.event_name }}" != "workflow_dispatch" ] || [ "${{ inputs.release }}" != "yes" ]; then
+            artifact="$name-$(git rev-parse --short HEAD)"
+          else
+            artifact="$name"
+          fi
+          (cd dist && zip -qr "../$name.zip" Skada SkadaImprovement SkadaStorage)
+          echo "name=$name" >> "$GITHUB_OUTPUT"
+          echo "artifact=$artifact" >> "$GITHUB_OUTPUT"
+          ls -lh "$name.zip"
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: ${{ steps.package.outputs.artifact }}
+          path: ${{ steps.package.outputs.name }}.zip
+          retention-days: ${{ inputs.release == 'yes' && 90 || 14 }}
+
+      - name: Create GitHub release
+        if: github.event_name == 'workflow_dispatch' && inputs.release == 'yes'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          version="${{ steps.version.outputs.version }}"
+          if gh release view "$version" >/dev/null 2>&1; then
+            echo "::error::release $version already exists"
+            exit 1
+          fi
+          # Newest existing tag by commit date -- not by semver, because
+          # tags like v1.9.1_fix are not valid semver and would be skipped.
+          previous="$(git tag --sort=-creatordate | grep -v "^$version$" | head -1)"
+
+          notes_args=(--generate-notes)
+          if [ -n "$previous" ]; then
+            echo "Generating notes since $previous"
+            notes_args+=(--notes-start-tag "$previous")
+          else
+            echo "No previous tag found; generating notes from the start."
+          fi
+
+          gh release create "$version" \
+            --title "Skada $version" \
+            "${notes_args[@]}" \
+            "${{ steps.package.outputs.name }}.zip"

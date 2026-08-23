@@ -116,6 +116,7 @@ Skada.defaults = {
 		setslimit = 15,
 		setstokeep = 15,
 		smartwait = 3,
+		combatgrace = 3,
 		stalecombat = true,
 		stalecombattime = 10,
 		timemesure = 2,
@@ -224,6 +225,13 @@ options.set = function(info, value)
 		Skada:UpdateDisplay(true)
 	elseif key == "syncoff" then
 		Skada:RegisterComms(value ~= true)
+	elseif key == "combatgrace" or key == "stalecombattime" then
+		-- ending a segment before the out of combat grace has run makes no
+		-- sense, so the idle timeout is dragged along rather than ignored.
+		if (Skada.profile.stalecombattime or 0) < Skada.profile.combatgrace then
+			Skada.profile.stalecombattime = Skada.profile.combatgrace
+			Skada:NotifyChange()
+		end
 	elseif key == "setstokeep" or key == "setslimit" then
 		Skada.maxsets = Skada.profile.setstokeep + Skada.profile.setslimit
 		Skada.maxmeme = min(60, max(30, Skada.maxsets + 10))
@@ -926,6 +934,31 @@ options.args.tweaks = {
 						}
 					}
 				},
+				combatend_opt = {
+					type = "group",
+					name = L["Segment End Delay"],
+					desc = format(L["Options for %s."], L["Segment End Delay"]),
+					order = 15,
+					args = {
+						gracedesc = {
+							type = "description",
+							name = L["opt_tweaks_combatgrace_desc"],
+							fontSize = "medium",
+							order = 10,
+							width = "full"
+						},
+						combatgrace = {
+							type = "range",
+							name = L["Duration"],
+							desc = L["opt_tweaks_combatgrace_slider_desc"],
+							min = 0,
+							max = 15,
+							step = 1,
+							bigStep = 1,
+							order = 20
+						}
+					}
+				},
 				stalecombat_opt = {
 					type = "group",
 					name = L["Stuck Combat Guard"],
@@ -951,11 +984,21 @@ options.args.tweaks = {
 							disabled = function()
 								return not Skada.profile.stalecombat
 							end,
-							min = Skada.COMBAT_END_GRACE,
+							min = 1,
 							max = 60,
 							step = 1,
 							bigStep = 1,
 							order = 30
+						},
+						stalewarn = {
+							type = "description",
+							name = function()
+								return format(L["opt_tweaks_stalecombat_warn"],
+									Skada.profile.combatgrace or Skada.COMBAT_END_GRACE,
+									L["Segment End Delay"])
+							end,
+							order = 40,
+							width = "full"
 						}
 					}
 				},

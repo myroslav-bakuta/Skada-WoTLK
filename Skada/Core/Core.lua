@@ -2694,6 +2694,10 @@ function combat_end(curtime)
 
 	if Skada.debuglog_on then
 		local set, count, names = Skada.current, 0, {}
+		-- set.time is only filled in by process_set, so a segment that is still
+		-- running would log a flat 0 here.
+		local elapsed = (set.time and set.time > 0) and set.time
+			or (set.starttime and (time() - set.starttime)) or 0
 		for name, actor in pairs(set.actors or Skada.dummyTable) do
 			count = count + 1
 			if count <= 40 then
@@ -2702,7 +2706,7 @@ function combat_end(curtime)
 			end
 		end
 		Skada:LogDebug("segment", "ending %s: time=%s gotboss=%s success=%s stopped=%s type=%s damage=%s heal=%s actors=%d",
-			tostring(set.mobname), tostring(set.time), tostring(set.gotboss), tostring(set.success),
+			tostring(set.mobname), tostring(elapsed), tostring(set.gotboss), tostring(set.success),
 			tostring(set.stopped), tostring(set.type), tostring(set.damage), tostring(set.heal), count)
 		Skada:LogDebug("segment", "  actors: %s", table.concat(names, ", "))
 		Skada:LogDebug("segment", "  ticks=%d of which lockdown=%d groupInCombat=%d petsInCombat=%d petsAlone=%d staleCombat=%d",
@@ -3263,6 +3267,7 @@ do
 	end
 
 	local function tentative_handler()
+		Skada:LogDebug("segment", "tentative segment dropped, the next combat event reuses it")
 		tentative_set = Skada.current
 		Skada.current = nil
 		tentative = nil

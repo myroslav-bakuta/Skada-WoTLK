@@ -1,8 +1,8 @@
 ## Interface: 30300
 ## Title: Skada: |cff7fff7fStorage|r
-## Title-ruRU: Skada: |cff7fff7fХранение|r
+## Title-ruRU: Skada: |cff7fff7fЗберігання|r
 ## Notes: Stores Skada segments.
-## Notes-ruRU: Хранилище сегментов Skada.
+## Notes-ruRU: Сховище сегментів Skada.
 ## Dependencies: Skada
 ## SavedVariablesPerCharacter: SkadaStorageDB
 ## DefaultState: disabled

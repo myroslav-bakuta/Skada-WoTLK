@@ -1002,6 +1002,79 @@ options.args.tweaks = {
 						}
 					}
 				},
+				debuglog_opt = {
+					type = "group",
+					name = L["Debug Log"],
+					desc = format(L["Options for %s."], L["Debug Log"]),
+					order = 30,
+					args = {
+						logdesc = {
+							type = "description",
+							name = L["opt_tweaks_debuglog_desc"],
+							fontSize = "medium",
+							order = 10,
+							width = "full"
+						},
+						debuglog = {
+							type = "toggle",
+							name = L["Enable"],
+							desc = L["opt_tweaks_debuglog_enable_desc"],
+							order = 20,
+							get = function()
+								return (Private.DebugLogStatus())
+							end,
+							set = function(_, value)
+								Private.ToggleDebugLog(value)
+								Skada:NotifyChange()
+							end
+						},
+						debuglogverbose = {
+							type = "toggle",
+							name = L["Verbose"],
+							desc = L["opt_tweaks_debuglog_verbose_desc"],
+							order = 30,
+							disabled = function()
+								return not (Private.DebugLogStatus())
+							end,
+							get = function()
+								local _, verbose = Private.DebugLogStatus()
+								return verbose
+							end,
+							set = function(_, value)
+								Private.ToggleDebugLog(true, value)
+								Skada:NotifyChange()
+							end
+						},
+						debuglogclear = {
+							type = "execute",
+							name = L["Clear"],
+							desc = L["opt_tweaks_debuglog_clear_desc"],
+							order = 40,
+							func = function()
+								Private.ClearDebugLog()
+								Skada:NotifyChange()
+							end
+						},
+						debuglogstatus = {
+							type = "description",
+							name = function()
+								local on, verbose, lines, sessions = Private.DebugLogStatus()
+								return format(L["opt_tweaks_debuglog_status"],
+									on and L["Yes"] or L["No"],
+									verbose and L["Yes"] or L["No"], lines, sessions)
+							end,
+							fontSize = "medium",
+							order = 50,
+							width = "full"
+						},
+						debugloghelp = {
+							type = "description",
+							name = L["opt_tweaks_debuglog_help"],
+							order = 60,
+							width = "full"
+						}
+					}
+				},
 				toast_opt = Private.ToastOptions(),
 				total_opt = Private.TotalOptions()
 			}

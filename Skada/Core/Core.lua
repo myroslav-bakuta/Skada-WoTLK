@@ -86,6 +86,22 @@ end
 -- last time a group pet or guardian showed up in the combat log.
 local pet_activity = nil
 
+-- diagnostics: what the 1s combat tick saw while a segment was open, and how
+-- long the group stayed out of combat between two segments.
+local last_combat_end = nil
+local tick_stats = {ticks = 0, lockdown = 0, group = 0, pets = 0, pets_only = 0}
+
+local function reset_tick_stats()
+	tick_stats.ticks, tick_stats.lockdown = 0, 0
+	tick_stats.group, tick_stats.pets, tick_stats.pets_only = 0, 0, 0
+end
+
+local function log_segment_gap(how)
+	if not Skada.debuglog_on then return end
+	Skada:LogDebug("segment", "new segment via %s, %s s since the previous one ended", how,
+		last_combat_end and format("%.1f", GetTime() - last_combat_end) or "?")
+end
+
 -- list of feeds & selected feed
 local feeds, selected_feed = {}, nil
 
@@ -325,6 +341,9 @@ local function summon_pet(petGUID, ownerGUID)
 	ownerGUID = guidToClass[guidOrClass] and guidOrClass or ownerGUID
 	guidToOwner[petGUID] = ownerGUID
 
+	Skada:LogDebug("pet", "summoned %s owner=%s (%s)", tostring(petGUID),
+		tostring(ownerGUID), tostring(guidToName[ownerGUID]))
+
 	-- "totem > elemental" can arrive before "shaman > totem", leaving the
 	-- elemental owned by the totem. re-point whatever this pet owns.
 	for guid, owner in next, guidToOwner do
@@ -338,6 +357,7 @@ local dismiss_pet
 do
 	local dismiss_timers = nil
 	local function dismiss_handler(guid)
+		Skada:LogDebug("pet", "dismissed %s (was owned by %s)", tostring(guid), tostring(guidToOwner[guid]))
 		guidToOwner[guid] = nil
 		guidToClass[guid] = nil
 
@@ -2660,6 +2680,8 @@ function combat_end()
 			tostring(set.mobname), tostring(set.time), tostring(set.gotboss), tostring(set.success),
 			tostring(set.stopped), tostring(set.type), tostring(set.damage), tostring(set.heal), count)
 		Skada:LogDebug("segment", "  actors: %s", table.concat(names, ", "))
+		Skada:LogDebug("segment", "  ticks=%d of which lockdown=%d groupInCombat=%d petsInCombat=%d petsAlone=%d",
+			tick_stats.ticks, tick_stats.lockdown, tick_stats.group, tick_stats.pets, tick_stats.pets_only)
 	end
 
 	Private.ClearTempUnits()
@@ -2678,6 +2700,16 @@ function combat_end()
 	-- process segment; nil means it was discarded and recycled,
 	-- so nothing below may touch Skada.current again.
 	local last_set = process_set(Skada.current, curtime)
+
+	if Skada.debuglog_on then
+		if last_set then
+			Skada:LogDebug("segment", "  saved as \"%s\" time=%s keep=%s", tostring(last_set.name),
+				tostring(last_set.time), tostring(last_set.keep))
+		else
+			Skada:LogDebug("segment", "  discarded: shorter than minsetlength=%s, or it had no mobname, or onlykeepbosses=%s",
+				tostring(P.minsetlength), tostring(P.onlykeepbosses))
+		end
+	end
 
 	-- process phase segments
 	if Skada.tempsets then
@@ -2741,6 +2773,7 @@ function combat_end()
 	Skada._Time = GetTime()
 	Skada._time = time()
 	pet_activity = nil
+	last_combat_end = Skada._Time
 	pending_kills, pending_any = del(pending_kills), false
 end
 
@@ -2908,12 +2941,31 @@ do
 
 	local function combat_tick()
 		Skada._time = time()
-		if not Skada.disabled and Skada.current and not InCombatLockdown() and not IsGroupInCombat() and not pets_in_combat() and Skada.insType ~= "pvp" and Skada.insType ~= "arena" then
-			Skada:Debug("\124cffffbb00EndSegment\124r: Combat Tick")
-			Skada:LogDebug("segment", "combat tick ends the segment: lockdown=%s groupInCombat=%s petsInCombat=%s insType=%s",
-				tostring(InCombatLockdown()), tostring(IsGroupInCombat()), tostring(pets_in_combat()), tostring(Skada.insType))
-			combat_end()
+		if Skada.disabled or not Skada.current then return end
+
+		local lockdown = InCombatLockdown()
+		local group = IsGroupInCombat()
+		local pets = pets_in_combat()
+
+		tick_stats.ticks = tick_stats.ticks + 1
+		if lockdown then tick_stats.lockdown = tick_stats.lockdown + 1 end
+		if group then tick_stats.group = tick_stats.group + 1 end
+		if pets then tick_stats.pets = tick_stats.pets + 1 end
+
+		if lockdown or group or pets then
+			-- the pet grace alone is holding this segment open
+			if pets and not lockdown and not group then
+				tick_stats.pets_only = tick_stats.pets_only + 1
+			end
+			return
 		end
+
+		if Skada.insType == "pvp" or Skada.insType == "arena" then return end
+
+		Skada:Debug("\124cffffbb00EndSegment\124r: Combat Tick")
+		Skada:LogDebug("segment", "combat tick ends the segment: lockdown=%s groupInCombat=%s petsInCombat=%s insType=%s",
+			tostring(lockdown), tostring(group), tostring(pets), tostring(Skada.insType))
+		combat_end()
 	end
 
 	function combat_start()
@@ -2935,11 +2987,13 @@ do
 		if Skada.current == nil then
 			Skada:Debug("\124cffffbb00StartCombat\124r: Segment Created!")
 			Skada.current = create_set(L["Current"], tentative_set)
+			log_segment_gap("combat_start")
 			Skada:LogDebug("segment", "created (reused tentative=%s) members=%s zone=%s diff=%s",
 				tostring(tentative_set ~= nil), tostring(starting_members),
 				tostring(Skada.insType), tostring(Skada.insDiff))
 		end
 		tentative_set = nil
+		reset_tick_stats()
 		Skada:LogDebugResetTrace()
 
 		if Skada.total == nil then
@@ -3175,6 +3229,8 @@ do
 
 			if src_is_interesting or dst_is_interesting then
 				self.current = create_set(L["Current"], tentative_set)
+				log_segment_gap("combat log")
+				reset_tick_stats()
 				self.total = self.total or create_set(L["Total"])
 
 				if tentative_timer then

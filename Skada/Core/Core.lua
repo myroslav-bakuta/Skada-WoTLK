@@ -91,6 +91,15 @@ local pet_activity = nil
 local last_combat_end = nil
 local tick_stats = {ticks = 0, lockdown = 0, group = 0, pets = 0, pets_only = 0, stale = 0}
 
+-- diagnostics: combat log events thrown away because the segment was stopped,
+-- and how long it stayed that way. smart stop freezes a segment seconds after a
+-- boss dies, and anything logged afterwards is lost with no trace at all.
+local dropped_events, dropped_time, stopped_since = 0, 0, nil
+
+local function stopped_seconds()
+	return dropped_time + (stopped_since and (GetTime() - stopped_since) or 0)
+end
+
 -- the whole group has to stay out of combat this long before we call the fight
 -- over. a single 1s sample is not enough: unit combat flags flicker between
 -- trash packs and used to chop one pull into several segments.
@@ -106,6 +115,7 @@ local out_of_combat_since = nil
 local function reset_tick_stats()
 	tick_stats.ticks, tick_stats.lockdown, tick_stats.stale = 0, 0, 0
 	tick_stats.group, tick_stats.pets, tick_stats.pets_only = 0, 0, 0
+	dropped_events, dropped_time, stopped_since = 0, 0, nil
 	out_of_combat_since = nil
 end
 
@@ -2698,6 +2708,10 @@ function combat_end(curtime)
 		Skada:LogDebug("segment", "  ticks=%d of which lockdown=%d groupInCombat=%d petsInCombat=%d petsAlone=%d staleCombat=%d",
 			tick_stats.ticks, tick_stats.lockdown, tick_stats.group, tick_stats.pets,
 			tick_stats.pets_only, tick_stats.stale)
+		if dropped_events > 0 or stopped_since then
+			Skada:LogDebug("segment", "  dropped %d combat log events over %.1f s while the segment was stopped",
+				dropped_events, stopped_seconds())
+		end
 	end
 
 	Private.ClearTempUnits()
@@ -2832,6 +2846,8 @@ function Skada:StopSegment(msg, phase)
 		end
 	end
 
+	stopped_since = stopped_since or GetTime()
+
 	self:Print(msg or L["Segment Stopped."])
 	self:LogDebug("segment", "stopped: %s (mobname=%s time=%s)", tostring(msg or L["Segment Stopped."]),
 		tostring(self.current.mobname), tostring(self.current.time))
@@ -2872,7 +2888,14 @@ function Skada:ResumeSegment(msg, index)
 		end
 	end
 
+	if stopped_since then
+		dropped_time = dropped_time + (GetTime() - stopped_since)
+		stopped_since = nil
+	end
+
 	self:Print(msg or L["Segment Resumed."])
+	self:LogDebug("segment", "resumed: %s (%d events dropped over %.1f s so far)",
+		tostring(msg or L["Segment Resumed."]), dropped_events, dropped_time)
 end
 
 function Skada:SetModes()
@@ -3303,7 +3326,16 @@ do
 		end
 
 		-- stopped or invalid events?
-		if self.current.stopped or not combatlog_events[t.event] then return end
+		if self.current.stopped then
+			-- count only what we would have tracked, so the number says how much
+			-- of the fight the stop really cost us.
+			if combatlog_events[t.event] then
+				dropped_events = dropped_events + 1
+			end
+			return
+		elseif not combatlog_events[t.event] then
+			return
+		end
 
 		self._Time = GetTime()
 

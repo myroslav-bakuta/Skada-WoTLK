@@ -7,6 +7,6 @@
 ## SavedVariablesPerCharacter: SkadaStorageDB
 ## DefaultState: disabled
 ## Author: Kader (|cff808080bkader#5341|r)
-## Version: 1.9.2
+## Version: 1.9.3
 
 SkadaStorage.lua

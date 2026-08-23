@@ -4,7 +4,7 @@
 -- @author: Kader B (https://github.com/bkader/LibCompat-1.0)
 --
 
-local MAJOR, MINOR = "LibCompat-1.0-Skada", 38
+local MAJOR, MINOR = "LibCompat-1.0-Skada", 39
 local lib, oldminor = LibStub:NewLibrary(MAJOR, MINOR)
 if not lib then return end
 
@@ -190,8 +190,7 @@ do
 
 		-- the walk state lives in the returned closure. it used to sit in
 		-- upvalues shared by every walk, so a walk started while another one was
-		-- running reset it and cut the outer walk short, silently skipping the
-		-- last group members.
+		-- running reset it and cut the outer walk short.
 		local function SelfIterator(excPets)
 			local step = 1
 			return function()
@@ -212,23 +211,20 @@ do
 			end
 		end
 
-		local function PartyIterator(excPets, nmem)
-			local self_next = SelfIterator(excPets)
-			local step, count = 1, 1
+		-- walks units[first..last] and, unless pets are excluded, the matching
+		-- unitpets entry right after each one.
+		local function RangeIterator(units, unitpets, excPets, first, last)
+			local step, count = 1, first
 			return function()
-				while step do
+				while count <= last do
 					local unit, owner
 					if step == 1 then
-						unit, owner = self_next()
-						if not unit then step = 2 end
-					elseif step == 2 then
-						unit, owner, step = party[count], nil, 3
-					elseif step == 3 then
+						unit, step = units[count], 2
+					else
 						if not excPets then
-							unit, owner = partypet[count], party[count]
+							unit, owner = unitpets[count], units[count]
 						end
-						count = count + 1
-						step = count <= nmem and 2 or nil
+						count, step = count + 1, 1
 					end
 					if unit and UnitExists(unit) then
 						return unit, owner
@@ -237,36 +233,23 @@ do
 			end
 		end
 
-		local function RaidIterator(excPets, nmem)
-			local step, count = 1, 1
-			return function()
-				while step do
-					local unit, owner
-					if step == 1 then
-						unit, owner, step = raid[count], nil, 2
-					elseif step == 2 then
-						if not excPets then
-							unit, owner = raidpet[count], raid[count]
-						end
-						count = count + 1
-						step = count <= nmem and 1 or nil
-					end
-					if unit and UnitExists(unit) then
-						return unit, owner
-					end
-				end
-			end
-		end
-
+		-- both unit lists hold "player"/"pet" at index 1 and the numbered units
+		-- from index 2 on, but the counts they get indexed against disagree:
+		-- GetNumPartyMembers leaves us out, GetNumRaidMembers counts us in. walking
+		-- either list from 1 to nmem therefore visited us twice, once as "player"
+		-- and once as our numbered unit, and in a party it stopped one entry short,
+		-- so the last member was never seen by the roster at all.
 		function UnitIterator(excPets)
 			local nmem = GetNumGroupMembers()
 			if nmem == 0 then
 				return SelfIterator(excPets)
 			end
 			if IsInRaid() then
-				return RaidIterator(excPets, nmem)
+				-- raid[2 .. nmem + 1] is raid1 .. raid<nmem>, and we are one of them
+				return RangeIterator(raid, raidpet, excPets, 2, nmem + 1)
 			end
-			return PartyIterator(excPets, nmem)
+			-- party[1 .. nmem + 1] is player, party1 .. party<nmem>
+			return RangeIterator(party, partypet, excPets, 1, nmem + 1)
 		end
 	end
 

@@ -104,11 +104,17 @@ end
 -- over. a single 1s sample is not enough: unit combat flags flicker between
 -- trash packs and used to chop one pull into several segments.
 local COMBAT_END_GRACE = 3
+ns.COMBAT_END_GRACE = COMBAT_END_GRACE -- the options slider floors on it
 
 -- UnitAffectingCombat can stay stuck on a group member for minutes, which kept
 -- segments running long after everything was dead. a quiet combat log outranks
 -- the flag: nothing logged for this long, and us out of combat, means over.
+-- the profile may raise it; ending before the grace has run makes no sense.
 local COMBAT_IDLE_TIMEOUT = 10
+local function combat_idle_timeout()
+	if P.stalecombat == false then return end
+	return max(COMBAT_END_GRACE, P.stalecombattime or COMBAT_IDLE_TIMEOUT)
+end
 
 local out_of_combat_since = nil
 
@@ -3002,8 +3008,9 @@ do
 		if Skada.insType == "pvp" or Skada.insType == "arena" then return end
 
 		-- stuck combat flag: trust the combat log going quiet instead
+		local timeout = combat_idle_timeout()
 		local idle = Skada._Time and (GetTime() - Skada._Time) or 0
-		if not lockdown and idle >= COMBAT_IDLE_TIMEOUT then
+		if timeout and not lockdown and idle >= timeout then
 			tick_stats.stale = tick_stats.stale + 1
 			Skada:Debug("\124cffffbb00EndSegment\124r: Combat Log Idle")
 			Skada:LogDebug("segment", "combat log quiet for %d s, ending the segment (groupInCombat=%s petsInCombat=%s)",

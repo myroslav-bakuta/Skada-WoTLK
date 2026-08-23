@@ -116,6 +116,8 @@ Skada.defaults = {
 		setslimit = 15,
 		setstokeep = 15,
 		smartwait = 3,
+		stalecombat = true,
+		stalecombattime = 10,
 		timemesure = 2,
 		tooltiprows = 3,
 		totalflag = 0x10,
@@ -920,6 +922,39 @@ options.args.tweaks = {
 							max = 10,
 							step = 0.01,
 							bigStep = 0.1,
+							order = 30
+						}
+					}
+				},
+				stalecombat_opt = {
+					type = "group",
+					name = L["Stuck Combat Guard"],
+					desc = format(L["Options for %s."], L["Stuck Combat Guard"]),
+					order = 20,
+					args = {
+						staledesc = {
+							type = "description",
+							name = L["opt_tweaks_stalecombat_desc"],
+							fontSize = "medium",
+							order = 10,
+							width = "full"
+						},
+						stalecombat = {
+							type = "toggle",
+							name = L["Enable"],
+							order = 20
+						},
+						stalecombattime = {
+							type = "range",
+							name = L["Idle Time"],
+							desc = L["opt_tweaks_stalecombattime_desc"],
+							disabled = function()
+								return not Skada.profile.stalecombat
+							end,
+							min = Skada.COMBAT_END_GRACE,
+							max = 60,
+							step = 1,
+							bigStep = 1,
 							order = 30
 						}
 					}

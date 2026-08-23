@@ -599,6 +599,17 @@ ns.creature_to_fight = {
 	[37934] = L["Valithria Dreamwalker"], -- Blistering Zombie
 	[37985] = L["Valithria Dreamwalker"], -- Dream Cloud
 
+	-- [[ Utgarde Keep ]] --
+	-- both fights carry on past a death: Annhylde raises Ingvar as an undead
+	-- with a creature id of its own, and the first of the two jarls to fall
+	-- keeps fighting as a ghost until the other one dies.
+	[23954] = L["Ingvar the Plunderer"], -- Ingvar the Plunderer
+	[23980] = L["Ingvar the Plunderer"], -- Ingvar the Plunderer (raised by Annhylde)
+	[24200] = L["Skarvald and Dalronn"], -- Skarvald the Constructor
+	[24201] = L["Skarvald and Dalronn"], -- Dalronn the Controller
+	[27390] = L["Skarvald and Dalronn"], -- Skarvald the Constructor (ghost)
+	[27389] = L["Skarvald and Dalronn"], -- Dalronn the Controller (ghost)
+
 	-- [[ Naxxramas ]] --
 	[16062] = L["The Four Horsemen"], -- Highlord Mograine
 	[16063] = L["The Four Horsemen"], -- Sir Zeliek
@@ -732,6 +743,7 @@ ns.creature_to_boss = {
 -- (only part of the roster spawns) and Mimiron (his parts die once per phase).
 
 ns.fight_to_boss = {
+	[L["Ingvar the Plunderer"]] = 23980, -- only the undead Ingvar stays down
 	[L["Thaddius"]] = 15928, -- Thaddius (after Feugen & Stalagg)
 	[L["Kologarn"]] = 32930, -- Kologarn (arms respawn)
 	[L["Auriaya"]] = 33515, -- Auriaya (after Sentries & Feral Defender)
@@ -743,6 +755,7 @@ ns.fight_to_boss = {
 	[L["Icecrown Gunship Battle"]] = {any = true, 36939, 37200},
 
 	[L["Blood Prince Council"]] = {37970, 37972, 37973}, -- Valanar, Keleseth, Taldaram
+	[L["Skarvald and Dalronn"]] = {24200, 24201}, -- either jarl may die first
 	[L["Twin Val'kyr"]] = {34496, 34497}, -- Eydis Darkbane, Fjola Lightbane
 	[L["The Iron Council"]] = {32857, 32867, 32927}, -- Brundir, Steelbreaker, Molgeim
 	[L["The Four Horsemen"]] = {16063, 16064, 16065, 30549} -- Zeliek, Korth'azz, Blaumeux, Rivendare

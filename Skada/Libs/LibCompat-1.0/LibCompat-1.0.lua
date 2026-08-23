@@ -183,78 +183,90 @@ do
 
 	local UnitIterator
 	do
-		local nmem, step, count
-
-		local function SelfIterator(excPets)
-			while step do
-				local unit, owner
-				if step == 1 then
-					unit, owner, step = "player", nil, 2
-				elseif step == 2 then
-					if not excPets then
-						unit, owner = "pet", "player"
-					end
-					step = nil
-				end
-				if unit and UnitExists(unit) then
-					return unit, owner
-				end
-			end
-		end
-
 		local party = Units.party
 		local partypet = Units.partypet
-		local function PartyIterator(excPets)
-			while step do
-				local unit, owner
-				if step <= 2 then
-					unit, owner = SelfIterator(excPets)
-					step = step or 3
-				elseif step == 3 then
-					unit, owner, step = party[count], nil, 4
-				elseif step == 4 then
-					if not excPets then
-						unit, owner = partypet[count], party[count]
+		local raid = Units.raid
+		local raidpet = Units.raidpet
+
+		-- the walk state lives in the returned closure. it used to sit in
+		-- upvalues shared by every walk, so a walk started while another one was
+		-- running reset it and cut the outer walk short, silently skipping the
+		-- last group members.
+		local function SelfIterator(excPets)
+			local step = 1
+			return function()
+				while step do
+					local unit, owner
+					if step == 1 then
+						unit, owner, step = "player", nil, 2
+					elseif step == 2 then
+						if not excPets then
+							unit, owner = "pet", "player"
+						end
+						step = nil
 					end
-					count = count + 1
-					step = count <= nmem and 3 or nil
-				end
-				if unit and UnitExists(unit) then
-					return unit, owner
+					if unit and UnitExists(unit) then
+						return unit, owner
+					end
 				end
 			end
 		end
 
-		local raid = Units.raid
-		local raidpet = Units.raidpet
-		local function RaidIterator(excPets)
-			while step do
-				local unit, owner
-				if step == 1 then
-					unit, owner, step = raid[count], nil, 2
-				elseif step == 2 then
-					if not excPets then
-						unit, owner = raidpet[count], raid[count]
+		local function PartyIterator(excPets, nmem)
+			local self_next = SelfIterator(excPets)
+			local step, count = 1, 1
+			return function()
+				while step do
+					local unit, owner
+					if step == 1 then
+						unit, owner = self_next()
+						if not unit then step = 2 end
+					elseif step == 2 then
+						unit, owner, step = party[count], nil, 3
+					elseif step == 3 then
+						if not excPets then
+							unit, owner = partypet[count], party[count]
+						end
+						count = count + 1
+						step = count <= nmem and 2 or nil
 					end
-					count = count + 1
-					step = count <= nmem and 1 or nil
+					if unit and UnitExists(unit) then
+						return unit, owner
+					end
 				end
-				if unit and UnitExists(unit) then
-					return unit, owner
+			end
+		end
+
+		local function RaidIterator(excPets, nmem)
+			local step, count = 1, 1
+			return function()
+				while step do
+					local unit, owner
+					if step == 1 then
+						unit, owner, step = raid[count], nil, 2
+					elseif step == 2 then
+						if not excPets then
+							unit, owner = raidpet[count], raid[count]
+						end
+						count = count + 1
+						step = count <= nmem and 1 or nil
+					end
+					if unit and UnitExists(unit) then
+						return unit, owner
+					end
 				end
 			end
 		end
 
 		function UnitIterator(excPets)
-			nmem, step = GetNumGroupMembers(), 1
+			local nmem = GetNumGroupMembers()
 			if nmem == 0 then
-				return SelfIterator, excPets
+				return SelfIterator(excPets)
 			end
-			count = 1
 			if IsInRaid() then
-				return RaidIterator, excPets
+				return RaidIterator(excPets, nmem)
 			end
-			return PartyIterator, excPets
+			return PartyIterator(excPets, nmem)
 		end
 	end
 

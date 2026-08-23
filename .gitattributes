@@ -6,7 +6,6 @@
 .editorconfig       export-ignore
 README.md           export-ignore
 CHANGELOG.md        export-ignore
-CITATION.cff        export-ignore
 
 * text=auto
 *.* text eol=lf

@@ -14,10 +14,13 @@ local date, time, GetTime = date, time, GetTime
 local select, pairs = select, pairs
 local band = bit.band
 
--- keep the saved variable from growing without bound.
-local MAX_LINES = 10000 -- per session
+-- keep the saved variable from growing without bound. a full 25 man raid night,
+-- twelve bosses and the trash between them, runs to roughly 20k lines with the
+-- roster snapshots deduplicated, so one session has room for a whole night.
+local MAX_LINES = 50000 -- per session
 local MAX_SESSIONS = 3 -- kept in the saved variable
-local MAX_ONCE_KEYS = 500 -- distinct deduplicated keys per session
+local MAX_TOTAL_LINES = 90000 -- across all kept sessions, whatever their count
+local MAX_ONCE_KEYS = 2000 -- distinct deduplicated keys per session
 local MAX_TRACE = 400 -- raw combat log events per segment, verbose only
 
 local log = nil -- current session's line list
@@ -28,6 +31,7 @@ local enabled = false
 local verbose = false
 local start_clock = 0 -- GetTime() when the session started
 local start_time = 0 -- time() when the session started
+local last_roster = nil -- the last roster snapshot written, to skip repeats
 
 -------------------------------------------------------------------------------
 -- combat log flag decoding
@@ -140,12 +144,26 @@ end
 
 local function new_session(db)
 	log, once, once_count = {}, {}, 0
+	last_roster = nil -- a fresh session logs the roster in full again
 	start_clock, start_time = GetTime(), time()
 
 	db.sessions = db.sessions or {}
 	tinsert(db.sessions, {started = date("%Y-%m-%d %H:%M:%S"), lines = log})
 
 	while #db.sessions > MAX_SESSIONS do
+		table.remove(db.sessions, 1)
+	end
+
+	-- a raid sized session is worth several short ones, so bound the file by
+	-- the lines it holds too. the current session is never dropped.
+	local total = 0
+	for i = 1, #db.sessions do
+		local lines = db.sessions[i].lines
+		total = total + (lines and #lines or 0)
+	end
+	while #db.sessions > 1 and total > MAX_TOTAL_LINES do
+		local lines = db.sessions[1].lines
+		total = total - (lines and #lines or 0)
 		table.remove(db.sessions, 1)
 	end
 end
@@ -342,6 +360,9 @@ end
 -------------------------------------------------------------------------------
 -- roster snapshot: the table every "is this actor in my group" check reads
 
+-- the roster is re-read on every group and zone change, and in a raid a full
+-- snapshot is thirty lines. an unchanged one collapses to a single line so a
+-- whole raid night still fits in the log.
 function Private.LogDebugRoster(reason)
 	if not enabled or not log then return end
 
@@ -354,20 +375,35 @@ function Private.LogDebugRoster(reason)
 	for _ in pairs(guidToClass) do classes = classes + 1 end
 	for _ in pairs(guidToOwner) do owners = owners + 1 end
 
+	local units, seen = nil, 0
+	if ns.UnitIterator then
+		units = {}
+		for unit, owner in ns.UnitIterator() do
+			seen = seen + 1
+			units[seen] = format("  unit=%-10s owner=%-10s name=%-14s guid=%s class=%s cached=%s",
+				tostring(unit), tostring(owner), tostring(UnitName(unit)),
+				tostring(UnitGUID(unit)), tostring(select(2, UnitClass(unit))),
+				tostring(guidToName[UnitGUID(unit) or ""] ~= nil))
+		end
+	end
+
+	local snapshot = units and tconcat(units, "|") or ""
+	if snapshot ~= "" and snapshot == last_roster then
+		ns:LogDebug("roster", "update (%s): unchanged, %d units, guidToName=%d guidToClass=%d guidToOwner=%d",
+			tostring(reason), seen, names, classes, owners)
+		return
+	end
+	last_roster = snapshot
+
 	ns:LogDebug("roster", "update (%s): IsInGroup=%s IsInRaid=%s GetNumGroupMembers=%s",
 		tostring(reason), tostring(ns.IsInGroup and ns.IsInGroup()),
 		tostring(ns.IsInRaid and ns.IsInRaid()),
 		tostring(ns.GetNumGroupMembers and ns.GetNumGroupMembers()))
 	ns:LogDebug("roster", "caches: guidToName=%d guidToClass=%d guidToOwner=%d", names, classes, owners)
 
-	if ns.UnitIterator then
-		local seen = 0
-		for unit, owner in ns.UnitIterator() do
-			seen = seen + 1
-			ns:LogDebug("roster", "  unit=%-10s owner=%-10s name=%-14s guid=%s class=%s cached=%s",
-				tostring(unit), tostring(owner), tostring(UnitName(unit)),
-				tostring(UnitGUID(unit)), tostring(select(2, UnitClass(unit))),
-				tostring(guidToName[UnitGUID(unit) or ""] ~= nil))
+	if units then
+		for i = 1, seen do
+			ns:LogDebug("roster", "%s", units[i])
 		end
 		ns:LogDebug("roster", "  units walked: %d", seen)
 	end

@@ -569,7 +569,11 @@ do
 			if creature_to_fight[id] then
 				-- report the fight's last kill when we know it, so the defeat
 				-- check has a creature id to match; true otherwise, as before.
-				return true, fight_to_boss[creature_to_fight[id]] or true, creature_to_fight[id] or name
+				local boss = fight_to_boss[creature_to_fight[id]]
+				if type(boss) == "table" then
+					boss = boss[1] -- keep a usable id, the list drives the defeat check
+				end
+				return true, boss or true, creature_to_fight[id] or name
 			end
 
 			return true, id, creature_to_fight[id] or name

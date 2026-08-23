@@ -581,11 +581,13 @@ ns.creature_to_fight = {
 	[36968] = L["Icecrown Gunship Battle"], -- Kor'kron Axethrower
 	[36982] = L["Icecrown Gunship Battle"], -- Kor'kron Rocketeer
 	[37117] = L["Icecrown Gunship Battle"], -- Kor'kron Battle-Mage
+	[36939] = L["Icecrown Gunship Battle"], -- High Overlord Saurfang (Alliance raids)
 	[37215] = L["Icecrown Gunship Battle"], -- Orgrim's Hammer
 	[36961] = L["Icecrown Gunship Battle"], -- Skybreaker Sergeant
 	[36969] = L["Icecrown Gunship Battle"], -- Skybreaker Rifleman
 	[36978] = L["Icecrown Gunship Battle"], -- Skybreaker Mortar Soldier
 	[37116] = L["Icecrown Gunship Battle"], -- Skybreaker Sorcerer
+	[37200] = L["Icecrown Gunship Battle"], -- Muradin Bronzebeard (Horde raids)
 	[37540] = L["Icecrown Gunship Battle"], -- The Skybreaker
 	[37970] = L["Blood Prince Council"], -- Prince Valanar
 	[37972] = L["Blood Prince Council"], -- Prince Keleseth
@@ -602,6 +604,7 @@ ns.creature_to_fight = {
 	[16063] = L["The Four Horsemen"], -- Sir Zeliek
 	[16064] = L["The Four Horsemen"], -- Thane Korth'azz
 	[16065] = L["The Four Horsemen"], -- Lady Blaumeux
+	[30549] = L["The Four Horsemen"], -- Baron Rivendare (replaces Mograine)
 	[15930] = L["Thaddius"], -- Feugen
 	[15929] = L["Thaddius"], -- Stalagg
 	[15928] = L["Thaddius"], -- Thaddius
@@ -679,10 +682,12 @@ ns.creature_to_boss = {
 	[36968] = 37215, -- Kor'kron Axethrower > Orgrim's Hammer
 	[36982] = 37215, -- Kor'kron Rocketeer > Orgrim's Hammer
 	[37117] = 37215, -- Kor'kron Battle-Mage > Orgrim's Hammer
+	[36939] = 37215, -- High Overlord Saurfang > Orgrim's Hammer
 	[36961] = 37540, -- Skybreaker Sergeant > The Skybreaker
 	[36969] = 37540, -- Skybreaker Rifleman > The Skybreaker
 	[36978] = 37540, -- Skybreaker Mortar Soldier > The Skybreaker
 	[37116] = 37540, -- Skybreaker Sorcerer > The Skybreaker
+	[37200] = 37540, -- Muradin Bronzebeard > The Skybreaker
 	[36791] = 36789, -- Blazing Skeleton > Valithria Dreamwalker
 	[37868] = 36789, -- Risen Archmage > Valithria Dreamwalker
 	[37886] = 36789, -- Gluttonous Abomination > Valithria Dreamwalker
@@ -717,14 +722,30 @@ ns.creature_to_boss = {
 -- without it Skada:IsEncounter can only report "some boss" (true) and the
 -- built-in defeat check (set.gotboss == creature id) can never match, so the
 -- segment stays flagged as a wipe unless DBM/BigWigs reports the kill.
--- only encounters with a single, unambiguous last kill belong here.
+--
+-- a number is the single creature whose death ends the fight.
+-- a list means the fight ends once every creature in it is dead, unless it
+-- carries "any", in which case the first of them to die ends it.
+--
+-- fights left out on purpose, they have no death to key on and still need a
+-- boss mod: Valithria Dreamwalker (healed, never dies), Faction Champions
+-- (only part of the roster spawns) and Mimiron (his parts die once per phase).
 
 ns.fight_to_boss = {
 	[L["Thaddius"]] = 15928, -- Thaddius (after Feugen & Stalagg)
 	[L["Kologarn"]] = 32930, -- Kologarn (arms respawn)
 	[L["Auriaya"]] = 33515, -- Auriaya (after Sentries & Feral Defender)
 	[L["Yogg-Saron"]] = 33288, -- Yogg-Saron (after Brain & Guardians)
-	[L["The Northrend Beasts"]] = 34797 -- Icehowl, always the last of the three
+	[L["The Northrend Beasts"]] = 34797, -- Icehowl, always the last of the three
+
+	-- the gunship ends with the enemy commander, and which one that is
+	-- depends on the raid's faction, so the first of them to die wins.
+	[L["Icecrown Gunship Battle"]] = {any = true, 36939, 37200},
+
+	[L["Blood Prince Council"]] = {37970, 37972, 37973}, -- Valanar, Keleseth, Taldaram
+	[L["Twin Val'kyr"]] = {34496, 34497}, -- Eydis Darkbane, Fjola Lightbane
+	[L["The Iron Council"]] = {32857, 32867, 32927}, -- Brundir, Steelbreaker, Molgeim
+	[L["The Four Horsemen"]] = {16063, 16064, 16065, 30549} -- Zeliek, Korth'azz, Blaumeux, Rivendare
 }
 
 -- use LibBossIDs-1.0 as backup plan

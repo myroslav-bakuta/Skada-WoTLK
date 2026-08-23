@@ -68,6 +68,21 @@ local vehicles = {}
 -- targets table used when detecting boss fights.
 local _targets = nil
 
+-- creature ids whose death is still needed to end a multi-creature fight,
+-- and whether the first of them to die is already enough.
+local pending_kills, pending_any = nil, false
+local function track_fight_kills(fight)
+	pending_kills, pending_any = del(pending_kills), false
+
+	local ids = fight and Skada.fight_to_boss and Skada.fight_to_boss[fight]
+	if type(ids) ~= "table" then return end
+
+	pending_kills, pending_any = new(), ids.any or false
+	for i = 1, #ids do
+		pending_kills[ids[i]] = true
+	end
+end
+
 -- last time a group pet or guardian showed up in the combat log.
 local pet_activity = nil
 
@@ -2678,6 +2693,7 @@ function combat_end()
 	Skada._Time = GetTime()
 	Skada._time = time()
 	pet_activity = nil
+	pending_kills, pending_any = del(pending_kills), false
 end
 
 function Skada:StopSegment(msg, phase)
@@ -2999,8 +3015,25 @@ do
 			-- they match the boss by name, which fails on renamed or custom
 			-- creatures, while this goes by creature id. whichever fires
 			-- first wins, the other one bails out on set.success.
-			if death_events[t.event] and set.gotboss == GetCreatureId(t.dstGUID) then
-				bossdefeat_timer = bossdefeat_timer or Skada:ScheduleTimer(BossDefeated, 0.1)
+			if death_events[t.event] then
+				local id = GetCreatureId(t.dstGUID)
+				local defeated = false
+
+				if pending_kills then -- a multi-creature fight
+					if pending_kills[id] then
+						pending_kills[id] = nil
+						defeated = pending_any or not next(pending_kills)
+						if defeated then
+							pending_kills = del(pending_kills)
+						end
+					end
+				else
+					defeated = (set.gotboss == id)
+				end
+
+				if defeated then
+					bossdefeat_timer = bossdefeat_timer or Skada:ScheduleTimer(BossDefeated, 0.1)
+				end
 			end
 			return
 		end
@@ -3014,6 +3047,7 @@ do
 				if isboss then -- found?
 					set.mobname = bossname or set.mobname or t.dstName
 					set.gotboss = bossid or true
+					track_fight_kills(set.mobname)
 					Skada:SendMessage("COMBAT_ENCOUNTER_START", set)
 					Skada:PrintFirstHit()
 					_targets = del(_targets)

@@ -1184,6 +1184,10 @@ end
 
 function Skada:BigWigs(_, _, event, message)
 	if event == "bosskill" and message and self.current and self.current.gotboss then
+		self:LogDebug("bossmod", "BigWigs bosskill: message=%s | set=%s match=%s",
+			tostring(message), tostring(self.current.mobname),
+			tostring(name_matches(message, self.current.mobname)))
+
 		if name_matches(message, self.current.mobname) and not self.current.success then
 			self.current.success = true
 
@@ -1229,6 +1233,15 @@ end
 function Skada:DBM(_, mod, wipe)
 	if not wipe and mod and mod.combatInfo then
 		local set = self.current or self.last -- just in case DBM was late.
+
+		if self.debuglog_on then
+			local info = mod.combatInfo
+			self:LogDebug("bossmod", "DBM EndCombat: name=%s mob=%s | set=%s gotboss=%s success=%s | match=%s",
+				tostring(info.name), tostring(info.mob), set and tostring(set.mobname) or "no set",
+				set and tostring(set.gotboss) or "-", set and tostring(set.success) or "-",
+				set and tostring(dbm_reports_our_boss(set, info)) or "-")
+		end
+
 		if set and not set.success and dbm_reports_our_boss(set, mod.combatInfo) then
 			set.success = true
 			set.gotboss = set.gotboss or mod.combatInfo.creatureId or true
@@ -1420,6 +1433,11 @@ do
 				actor.class = "UNKNOWN"
 				self:Debug(format("Unknown unit detected: \124cffffbb00%s\124r (%s)", actorname, actorid))
 			end
+
+			self:LogDebug("actor", "created %s (%s) class=%s enemy=%s fake=%s flags=%s",
+				tostring(actorname), tostring(actorid), tostring(actor.class),
+				tostring(actor.enemy), tostring(actor.fake),
+				type(actorflags) == "number" and Private.DecodeFlags(actorflags) or tostring(actorflags))
 
 			for _, mode in pairs(modes) do
 				-- common

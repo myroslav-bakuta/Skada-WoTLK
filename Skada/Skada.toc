@@ -4,7 +4,7 @@
 ## Notes-ruRU: Измеритель урона.
 ## OptionalDeps: Ace3, LibSharedMedia-3.0, LibDBIcon-1.0, AceGUI-3.0-SharedMediaWidgets, LibBossIDs-1.0, LibFail-1.0
 ## LoadOnDemand: 0
-## SavedVariables: SkadaDB
+## SavedVariables: SkadaDB, SkadaDebugLog
 ## SavedVariablesPerCharacter: SkadaCharDB
 ## DefaultState: enabled
 ## Author: Kader (|cff808080bkader#5341|r)

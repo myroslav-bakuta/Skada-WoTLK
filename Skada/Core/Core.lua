@@ -1666,6 +1666,26 @@ local function slash_command(param)
 	elseif cmd == "debug" then
 		P.debug = not P.debug
 		Skada:Print("Debug mode " .. (P.debug and ("\124cff00ff00" .. L["ENABLED"] .. "\124r") or ("\124cffff0000" .. L["DISABLED"] .. "\124r")))
+	elseif cmd == "log" or cmd == "debuglog" then
+		local sub = arg1 and strlower(arg1) or ""
+		if sub == "clear" then
+			Private.ClearDebugLog()
+			Skada:Print("Debug log cleared.")
+		elseif sub == "verbose" then
+			local on, verb = Private.ToggleDebugLog(true, true)
+			Skada:Printf("Debug log: \124cff00ff00%s\124r (verbose: %s)", tostring(on), tostring(verb))
+		elseif sub == "off" then
+			Private.ToggleDebugLog(false)
+			Skada:Print("Debug log: \124cffff0000off\124r")
+		elseif sub == "on" then
+			local on, verb = Private.ToggleDebugLog(true, false)
+			Skada:Printf("Debug log: \124cff00ff00%s\124r (verbose: %s)", tostring(on), tostring(verb))
+		else
+			local on, verb, lines, sessions = Private.DebugLogStatus()
+			Skada:Printf("Debug log: %s, verbose: %s, lines: %d, sessions: %d", tostring(on), tostring(verb), lines, sessions)
+			Skada:Print("/skada log on | verbose | off | clear")
+			Skada:Print("Saved to SkadaDebugLog on /reload or logout.")
+		end
 	elseif cmd == "config" or cmd == "options" then
 		Private.OpenOptions()
 	elseif cmd == "memorycheck" or cmd == "memory" or cmd == "ram" then
@@ -1744,6 +1764,7 @@ local function slash_command(param)
 		Print("\124cffffaeae/skada\124r \124cffffff33about\124r / \124cffffff33version\124r / \124cffffff33website\124r")
 		Print("\124cffffaeae/skada\124r \124cffffff33reset\124r / \124cffffff33reinstall\124r")
 		Print("\124cffffaeae/skada\124r \124cffffff33config\124r / \124cffffff33debug\124r")
+		Print("\124cffffaeae/skada\124r \124cffffff33log\124r [on | verbose | off | clear]")
 	end
 end
 
@@ -1863,6 +1884,10 @@ do
 		self.insDiff = isininstance and self:GetInstanceDiff() or nil
 		self.insType = instanceType
 
+		self:LogDebug("zone", "%s: instanceType=%s diff=%s inInstance=%s inPvP=%s",
+			tostring(GetRealZoneText and GetRealZoneText()), tostring(self.insType),
+			tostring(self.insDiff), tostring(isininstance), tostring(isinpvp))
+
 		was_in_instance = (isininstance == true)
 		was_in_pvp = (isinpvp == true)
 		self:Toggle()
@@ -1933,6 +1958,10 @@ do
 	function Skada:UpdateRoster()
 		check_for_join_and_leave()
 		check_group()
+
+		if self.debuglog_on then
+			Private.LogDebugRoster("UpdateRoster")
+		end
 
 		-- version check
 		local t, _, count = GetGroupTypeAndCount()
@@ -2490,6 +2519,7 @@ function Skada:OnEnable()
 	end
 
 	Private.ReloadSettings()
+	Private.SetupDebugLog()
 	self.__memory_timer = self:ScheduleTimer("CheckMemory", 3)
 	self.__garbage_timer = self:ScheduleTimer("CleanGarbage", 4)
 end
@@ -2517,6 +2547,8 @@ local function BossDefeated()
 	end
 
 	Skada:Debug("\124cffffbb00COMBAT_BOSS_DEFEATED\124r: Skada")
+	Skada:LogDebug("boss", "defeated %s (gotboss=%s), smartstop=%s", tostring(set.mobname),
+		tostring(set.gotboss), tostring(P.smartstop))
 	Skada:SendMessage("COMBAT_BOSS_DEFEATED", set)
 	Skada:SmartStop(set)
 end
@@ -2614,6 +2646,22 @@ end
 
 function combat_end()
 	if not Skada.current then return end
+
+	if Skada.debuglog_on then
+		local set, count, names = Skada.current, 0, {}
+		for name, actor in pairs(set.actors or Skada.dummyTable) do
+			count = count + 1
+			if count <= 40 then
+				names[#names + 1] = format("%s(%s%s d=%s h=%s)", tostring(name), tostring(actor.class),
+					actor.enemy and ",enemy" or "", tostring(actor.damage), tostring(actor.heal))
+			end
+		end
+		Skada:LogDebug("segment", "ending %s: time=%s gotboss=%s success=%s stopped=%s type=%s damage=%s heal=%s actors=%d",
+			tostring(set.mobname), tostring(set.time), tostring(set.gotboss), tostring(set.success),
+			tostring(set.stopped), tostring(set.type), tostring(set.damage), tostring(set.heal), count)
+		Skada:LogDebug("segment", "  actors: %s", table.concat(names, ", "))
+	end
+
 	Private.ClearTempUnits()
 	wipe(GetCreatureId) -- wipe cached creature IDs
 
@@ -2733,6 +2781,8 @@ function Skada:StopSegment(msg, phase)
 	end
 
 	self:Print(msg or L["Segment Stopped."])
+	self:LogDebug("segment", "stopped: %s (mobname=%s time=%s)", tostring(msg or L["Segment Stopped."]),
+		tostring(self.current.mobname), tostring(self.current.time))
 	self:RegisterEvent("PLAYER_REGEN_ENABLED")
 end
 
@@ -2860,6 +2910,8 @@ do
 		Skada._time = time()
 		if not Skada.disabled and Skada.current and not InCombatLockdown() and not IsGroupInCombat() and not pets_in_combat() and Skada.insType ~= "pvp" and Skada.insType ~= "arena" then
 			Skada:Debug("\124cffffbb00EndSegment\124r: Combat Tick")
+			Skada:LogDebug("segment", "combat tick ends the segment: lockdown=%s groupInCombat=%s petsInCombat=%s insType=%s",
+				tostring(InCombatLockdown()), tostring(IsGroupInCombat()), tostring(pets_in_combat()), tostring(Skada.insType))
 			combat_end()
 		end
 	end
@@ -2883,8 +2935,12 @@ do
 		if Skada.current == nil then
 			Skada:Debug("\124cffffbb00StartCombat\124r: Segment Created!")
 			Skada.current = create_set(L["Current"], tentative_set)
+			Skada:LogDebug("segment", "created (reused tentative=%s) members=%s zone=%s diff=%s",
+				tostring(tentative_set ~= nil), tostring(starting_members),
+				tostring(Skada.insType), tostring(Skada.insDiff))
 		end
 		tentative_set = nil
+		Skada:LogDebugResetTrace()
 
 		if Skada.total == nil then
 			Skada.total = create_set(L["Total"], Skada.sets[0])
@@ -3026,6 +3082,7 @@ do
 						if defeated then
 							pending_kills = del(pending_kills)
 						end
+						Skada:LogDebug("boss", "%s died (%s), fight over=%s", tostring(t.dstName), tostring(id), tostring(defeated))
 					end
 				else
 					defeated = (set.gotboss == id)
@@ -3033,6 +3090,10 @@ do
 
 				if defeated then
 					bossdefeat_timer = bossdefeat_timer or Skada:ScheduleTimer(BossDefeated, 0.1)
+					Skada:LogDebug("boss", "defeat scheduled for %s (%s)", tostring(set.mobname), tostring(id))
+				elseif Skada.debuglog_on and id then
+					Skada:LogDebugOnce("death:" .. id, "boss", "death of %s (%s) does not end %s (gotboss=%s)",
+						tostring(t.dstName), tostring(id), tostring(set.mobname), tostring(set.gotboss))
 				end
 			end
 			return
@@ -3051,11 +3112,16 @@ do
 					Skada:SendMessage("COMBAT_ENCOUNTER_START", set)
 					Skada:PrintFirstHit()
 					_targets = del(_targets)
+					Skada:Debug(format("\124cffffbb00Boss Check\124r: %s (%s) - match, gotboss=%s", t.dstName or "?", GetCreatureId(t.dstGUID) or 0, tostring(set.gotboss)))
+					Skada:LogDebug("boss", "detected %s from %s (%s), gotboss=%s, pending kills=%s",
+						tostring(set.mobname), tostring(t.dstName), tostring(GetCreatureId(t.dstGUID)),
+						tostring(set.gotboss), pending_kills and "yes" or "no")
 				else
 					_targets = _targets or new()
 					_targets[t.dstName] = true
 					set.gotboss = false
 					Skada:Debug(format("\124cffffbb00Boss Check\124r: %s (%s) - no match", t.dstName or "?", GetCreatureId(t.dstGUID) or 0))
+					Skada:LogDebug("boss", "no match for %s (%s)", tostring(t.dstName), tostring(GetCreatureId(t.dstGUID)))
 				end
 			end
 		end
@@ -3152,6 +3218,13 @@ do
 		end
 
 		check_cached_names(t)
+
+		if self.debuglog_on then
+			Private.LogDebugActors(t)
+			self:LogDebugTrace("cleu", "%s src=%s dst=%s spell=%s amount=%s",
+				tostring(t.event), tostring(t.srcName), tostring(t.dstName),
+				tostring(t.spellname or t.spellid), tostring(t.amount))
+		end
 
 		for func, flags in next, combatlog_events[t.event] do
 			local fail = false

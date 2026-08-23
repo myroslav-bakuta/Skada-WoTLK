@@ -68,6 +68,9 @@ local vehicles = {}
 -- targets table used when detecting boss fights.
 local _targets = nil
 
+-- last time a group pet or guardian showed up in the combat log.
+local pet_activity = nil
+
 -- list of feeds & selected feed
 local feeds, selected_feed = {}, nil
 
@@ -2542,10 +2545,13 @@ end
 -- true if a tracked pet/guardian is still generating combat log activity.
 -- IsGroupInCombat only walks unit ids, and guardians own none, so a segment
 -- fed purely by guardian damage would be ended while the pet is still hitting.
+-- this deliberately does not read Skada._Time: that one is refreshed by every
+-- tracked event, so it would hold the segment open for as long as anything at
+-- all is happening, and whole instance runs would end up in a single segment.
 local PET_COMBAT_GRACE = 3 -- seconds of silence before we let the segment end
 local function pets_in_combat()
-	if not next(guidToOwner) or not Skada._Time then return false end
-	return (GetTime() - Skada._Time) < PET_COMBAT_GRACE
+	if not pet_activity then return false end
+	return (GetTime() - pet_activity) < PET_COMBAT_GRACE
 end
 
 -- never initially registered.
@@ -2671,6 +2677,7 @@ function combat_end()
 
 	Skada._Time = GetTime()
 	Skada._time = time()
+	pet_activity = nil
 end
 
 function Skada:StopSegment(msg, phase)
@@ -3103,6 +3110,13 @@ do
 		if self.current.stopped or not combatlog_events[t.event] then return end
 
 		self._Time = GetTime()
+
+		-- only pet/guardian activity may keep the segment alive, see
+		-- pets_in_combat above.
+		if guidToOwner[t.srcGUID] or guidToOwner[t.dstGUID] then
+			pet_activity = self._Time
+		end
+
 		check_cached_names(t)
 
 		for func, flags in next, combatlog_events[t.event] do

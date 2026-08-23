@@ -1,15 +1,15 @@
 ## Interface: 30300
 ## Title: Skada
 ## Notes: Modular damage meter.
-## Notes-ruRU: Измеритель урона.
+## Notes-ruRU: Вимірювач шкоди.
 ## OptionalDeps: Ace3, LibSharedMedia-3.0, LibDBIcon-1.0, AceGUI-3.0-SharedMediaWidgets, LibBossIDs-1.0, LibFail-1.0
 ## LoadOnDemand: 0
-## SavedVariables: SkadaDB
+## SavedVariables: SkadaDB, SkadaDebugLog
 ## SavedVariablesPerCharacter: SkadaCharDB
 ## DefaultState: enabled
 ## Author: Kader (|cff808080bkader#5341|r)
-## Version: 1.9.1
-## X-Date: 2026-08-02 @ 18:25 |cff808080UTC|r
+## Version: 1.9.4
+## X-Date: 2026-08-23 @ 18:05 |cff808080UTC|r
 ## X-Credits: Zarnivoop
 ## X-Category: Combat
 ## X-License: MIT/X

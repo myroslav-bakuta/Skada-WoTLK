@@ -116,6 +116,9 @@ Skada.defaults = {
 		setslimit = 15,
 		setstokeep = 15,
 		smartwait = 3,
+		combatgrace = 3,
+		stalecombat = true,
+		stalecombattime = 10,
 		timemesure = 2,
 		tooltiprows = 3,
 		totalflag = 0x10,
@@ -222,6 +225,13 @@ options.set = function(info, value)
 		Skada:UpdateDisplay(true)
 	elseif key == "syncoff" then
 		Skada:RegisterComms(value ~= true)
+	elseif key == "combatgrace" or key == "stalecombattime" then
+		-- ending a segment before the out of combat grace has run makes no
+		-- sense, so the idle timeout is dragged along rather than ignored.
+		if (Skada.profile.stalecombattime or 0) < Skada.profile.combatgrace then
+			Skada.profile.stalecombattime = Skada.profile.combatgrace
+			Skada:NotifyChange()
+		end
 	elseif key == "setstokeep" or key == "setslimit" then
 		Skada.maxsets = Skada.profile.setstokeep + Skada.profile.setslimit
 		Skada.maxmeme = min(60, max(30, Skada.maxsets + 10))
@@ -648,7 +658,7 @@ options.args.generaloptions = {
 					name = L["Segments to keep"],
 					desc = L["The number of fight segments to keep. Persistent segments are not included in this."],
 					min = 0,
-					max = 25,
+					max = 50,
 					step = 1,
 					order = 210
 				},
@@ -657,7 +667,7 @@ options.args.generaloptions = {
 					name = L["Persistent segments"],
 					desc = L["The number of persistent fight segments to keep."],
 					min = 0,
-					max = 25,
+					max = 50,
 					step = 1,
 					order = 220
 				},
@@ -921,6 +931,147 @@ options.args.tweaks = {
 							step = 0.01,
 							bigStep = 0.1,
 							order = 30
+						}
+					}
+				},
+				combatend_opt = {
+					type = "group",
+					name = L["Segment End Delay"],
+					desc = format(L["Options for %s."], L["Segment End Delay"]),
+					order = 15,
+					args = {
+						gracedesc = {
+							type = "description",
+							name = L["opt_tweaks_combatgrace_desc"],
+							fontSize = "medium",
+							order = 10,
+							width = "full"
+						},
+						combatgrace = {
+							type = "range",
+							name = L["Duration"],
+							desc = L["opt_tweaks_combatgrace_slider_desc"],
+							min = 0,
+							max = 15,
+							step = 1,
+							bigStep = 1,
+							order = 20
+						}
+					}
+				},
+				stalecombat_opt = {
+					type = "group",
+					name = L["Stuck Combat Guard"],
+					desc = format(L["Options for %s."], L["Stuck Combat Guard"]),
+					order = 20,
+					args = {
+						staledesc = {
+							type = "description",
+							name = L["opt_tweaks_stalecombat_desc"],
+							fontSize = "medium",
+							order = 10,
+							width = "full"
+						},
+						stalecombat = {
+							type = "toggle",
+							name = L["Enable"],
+							order = 20
+						},
+						stalecombattime = {
+							type = "range",
+							name = L["Idle Time"],
+							desc = L["opt_tweaks_stalecombattime_desc"],
+							disabled = function()
+								return not Skada.profile.stalecombat
+							end,
+							min = 1,
+							max = 60,
+							step = 1,
+							bigStep = 1,
+							order = 30
+						},
+						stalewarn = {
+							type = "description",
+							name = function()
+								return format(L["opt_tweaks_stalecombat_warn"],
+									Skada.profile.combatgrace or Skada.COMBAT_END_GRACE,
+									L["Segment End Delay"])
+							end,
+							order = 40,
+							width = "full"
+						}
+					}
+				},
+				debuglog_opt = {
+					type = "group",
+					name = L["Debug Log"],
+					desc = format(L["Options for %s."], L["Debug Log"]),
+					order = 30,
+					args = {
+						logdesc = {
+							type = "description",
+							name = L["opt_tweaks_debuglog_desc"],
+							fontSize = "medium",
+							order = 10,
+							width = "full"
+						},
+						debuglog = {
+							type = "toggle",
+							name = L["Enable"],
+							desc = L["opt_tweaks_debuglog_enable_desc"],
+							order = 20,
+							get = function()
+								return (Private.DebugLogStatus())
+							end,
+							set = function(_, value)
+								Private.ToggleDebugLog(value)
+								Skada:NotifyChange()
+							end
+						},
+						debuglogverbose = {
+							type = "toggle",
+							name = L["Verbose"],
+							desc = L["opt_tweaks_debuglog_verbose_desc"],
+							order = 30,
+							disabled = function()
+								return not (Private.DebugLogStatus())
+							end,
+							get = function()
+								local _, verbose = Private.DebugLogStatus()
+								return verbose
+							end,
+							set = function(_, value)
+								Private.ToggleDebugLog(true, value)
+								Skada:NotifyChange()
+							end
+						},
+						debuglogclear = {
+							type = "execute",
+							name = L["Clear"],
+							desc = L["opt_tweaks_debuglog_clear_desc"],
+							order = 40,
+							func = function()
+								Private.ClearDebugLog()
+								Skada:NotifyChange()
+							end
+						},
+						debuglogstatus = {
+							type = "description",
+							name = function()
+								local on, verbose, lines, sessions = Private.DebugLogStatus()
+								return format(L["opt_tweaks_debuglog_status"],
+									on and L["Yes"] or L["No"],
+									verbose and L["Yes"] or L["No"], lines, sessions)
+							end,
+							fontSize = "medium",
+							order = 50,
+							width = "full"
+						},
+						debugloghelp = {
+							type = "description",
+							name = L["opt_tweaks_debuglog_help"],
+							order = 60,
+							width = "full"
 						}
 					}
 				},

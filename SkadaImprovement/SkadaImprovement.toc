@@ -1,13 +1,13 @@
 ## Interface: 30300
 ## Title: Skada: |cff7fff7fImprovement|r
-## Title-ruRU: Skada: |cff7fff7fУлучшение|r
+## Title-ruRU: Skada: |cff7fff7fПокращення|r
 ## Notes: Saves your character boss fights data to track your improvement.
-## Notes-ruRU: Сохраняет данные о боях с боссом вашего персонажа, чтобы отслеживать ваш прогресс.
+## Notes-ruRU: Зберігає дані боїв із босами вашого персонажа, щоб відстежувати ваш прогрес.
 ## Dependencies: Skada
 ## SavedVariablesPerCharacter: SkadaImprovementDB
 ## DefaultState: disabled
 ## Author: Kader (|cff808080bkader#5341|r)
-## Version: 1.9.1
+## Version: 1.9.4
 
 Locales.lua
 SkadaImprovement.lua

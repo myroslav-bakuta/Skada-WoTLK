@@ -4,7 +4,7 @@
 -- @author: Kader B (https://github.com/bkader/LibCompat-1.0)
 --
 
-local MAJOR, MINOR = "LibCompat-1.0-Skada", 38
+local MAJOR, MINOR = "LibCompat-1.0-Skada", 39
 local lib, oldminor = LibStub:NewLibrary(MAJOR, MINOR)
 if not lib then return end
 
@@ -183,78 +183,73 @@ do
 
 	local UnitIterator
 	do
-		local nmem, step, count
-
-		local function SelfIterator(excPets)
-			while step do
-				local unit, owner
-				if step == 1 then
-					unit, owner, step = "player", nil, 2
-				elseif step == 2 then
-					if not excPets then
-						unit, owner = "pet", "player"
-					end
-					step = nil
-				end
-				if unit and UnitExists(unit) then
-					return unit, owner
-				end
-			end
-		end
-
 		local party = Units.party
 		local partypet = Units.partypet
-		local function PartyIterator(excPets)
-			while step do
-				local unit, owner
-				if step <= 2 then
-					unit, owner = SelfIterator(excPets)
-					step = step or 3
-				elseif step == 3 then
-					unit, owner, step = party[count], nil, 4
-				elseif step == 4 then
-					if not excPets then
-						unit, owner = partypet[count], party[count]
-					end
-					count = count + 1
-					step = count <= nmem and 3 or nil
-				end
-				if unit and UnitExists(unit) then
-					return unit, owner
-				end
-			end
-		end
-
 		local raid = Units.raid
 		local raidpet = Units.raidpet
-		local function RaidIterator(excPets)
-			while step do
-				local unit, owner
-				if step == 1 then
-					unit, owner, step = raid[count], nil, 2
-				elseif step == 2 then
-					if not excPets then
-						unit, owner = raidpet[count], raid[count]
+
+		-- the walk state lives in the returned closure. it used to sit in
+		-- upvalues shared by every walk, so a walk started while another one was
+		-- running reset it and cut the outer walk short.
+		local function SelfIterator(excPets)
+			local step = 1
+			return function()
+				while step do
+					local unit, owner
+					if step == 1 then
+						unit, owner, step = "player", nil, 2
+					elseif step == 2 then
+						if not excPets then
+							unit, owner = "pet", "player"
+						end
+						step = nil
 					end
-					count = count + 1
-					step = count <= nmem and 1 or nil
-				end
-				if unit and UnitExists(unit) then
-					return unit, owner
+					if unit and UnitExists(unit) then
+						return unit, owner
+					end
 				end
 			end
 		end
 
+		-- walks units[first..last] and, unless pets are excluded, the matching
+		-- unitpets entry right after each one.
+		local function RangeIterator(units, unitpets, excPets, first, last)
+			local step, count = 1, first
+			return function()
+				while count <= last do
+					local unit, owner
+					if step == 1 then
+						unit, step = units[count], 2
+					else
+						if not excPets then
+							unit, owner = unitpets[count], units[count]
+						end
+						count, step = count + 1, 1
+					end
+					if unit and UnitExists(unit) then
+						return unit, owner
+					end
+				end
+			end
+		end
+
+		-- both unit lists hold "player"/"pet" at index 1 and the numbered units
+		-- from index 2 on, but the counts they get indexed against disagree:
+		-- GetNumPartyMembers leaves us out, GetNumRaidMembers counts us in. walking
+		-- either list from 1 to nmem therefore visited us twice, once as "player"
+		-- and once as our numbered unit, and in a party it stopped one entry short,
+		-- so the last member was never seen by the roster at all.
 		function UnitIterator(excPets)
-			nmem, step = GetNumGroupMembers(), 1
+			local nmem = GetNumGroupMembers()
 			if nmem == 0 then
-				return SelfIterator, excPets
+				return SelfIterator(excPets)
 			end
-			count = 1
 			if IsInRaid() then
-				return RaidIterator, excPets
+				-- raid[2 .. nmem + 1] is raid1 .. raid<nmem>, and we are one of them
+				return RangeIterator(raid, raidpet, excPets, 2, nmem + 1)
 			end
-			return PartyIterator, excPets
+			-- party[1 .. nmem + 1] is player, party1 .. party<nmem>
+			return RangeIterator(party, partypet, excPets, 1, nmem + 1)
 		end
 	end
 

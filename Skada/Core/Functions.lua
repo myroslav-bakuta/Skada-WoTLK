@@ -542,6 +542,7 @@ end
 do
 	local creature_to_fight = Skada.creature_to_fight or Skada.dummyTable
 	local creature_to_boss = Skada.creature_to_boss or Skada.dummyTable
+	local fight_to_boss = Skada.fight_to_boss or Skada.dummyTable
 	local GetCreatureId = Skada.GetCreatureId
 
 	-- checks if the provided guid is a boss
@@ -566,7 +567,13 @@ do
 			end
 
 			if creature_to_fight[id] then
-				return true, true, creature_to_fight[id] or name
+				-- report the fight's last kill when we know it, so the defeat
+				-- check has a creature id to match; true otherwise, as before.
+				local boss = fight_to_boss[creature_to_fight[id]]
+				if type(boss) == "table" then
+					boss = boss[1] -- keep a usable id, the list drives the defeat check
+				end
+				return true, boss or true, creature_to_fight[id] or name
 			end
 
 			return true, id, creature_to_fight[id] or name
@@ -1169,9 +1176,19 @@ end
 
 local find, lower = string.find, string.lower
 
+-- plain search: boss names are not patterns, and a "-" in one of them
+-- ("Yogg-Saron", "Blood-Queen Lana'thel") makes an exact name fail to match.
+local function name_matches(haystack, needle)
+	return haystack and needle and find(lower(haystack), lower(needle), 1, true) ~= nil
+end
+
 function Skada:BigWigs(_, _, event, message)
 	if event == "bosskill" and message and self.current and self.current.gotboss then
-		if find(lower(message), lower(self.current.mobname)) ~= nil and not self.current.success then
+		self:LogDebug("bossmod", "BigWigs bosskill: message=%s | set=%s match=%s",
+			tostring(message), tostring(self.current.mobname),
+			tostring(name_matches(message, self.current.mobname)))
+
+		if name_matches(message, self.current.mobname) and not self.current.success then
 			self.current.success = true
 
 			if self.tempsets then -- phases
@@ -1192,10 +1209,40 @@ function Skada:BigWigs(_, _, event, message)
 	end
 end
 
+-- true when DBM is reporting the fight this segment is tracking. creature ids
+-- are locale independent, names are not: on translated realms DBM's name and
+-- ours rarely match ("Боевой корабль" against "Бой на кораблях"), which is why
+-- the ids come first and the name is only a fallback.
+local function dbm_reports_our_boss(set, info)
+	local id = set.gotboss
+	if type(id) == "number" then
+		if info.mob == id then return true end
+		if info.killMobs and info.killMobs[id] then return true end
+
+		local ids = info.multiMobPullDetection
+		if ids then
+			for i = 1, #ids do
+				if ids[i] == id then return true end
+			end
+		end
+	end
+
+	return info.name and (not set.mobname or name_matches(set.mobname, info.name)) or false
+end
+
 function Skada:DBM(_, mod, wipe)
 	if not wipe and mod and mod.combatInfo then
 		local set = self.current or self.last -- just in case DBM was late.
-		if set and not set.success and mod.combatInfo.name and (not set.mobname or find(lower(set.mobname), lower(mod.combatInfo.name)) ~= nil) then
+
+		if self.debuglog_on then
+			local info = mod.combatInfo
+			self:LogDebug("bossmod", "DBM EndCombat: name=%s mob=%s | set=%s gotboss=%s success=%s | match=%s",
+				tostring(info.name), tostring(info.mob), set and tostring(set.mobname) or "no set",
+				set and tostring(set.gotboss) or "-", set and tostring(set.success) or "-",
+				set and tostring(dbm_reports_our_boss(set, info)) or "-")
+		end
+
+		if set and not set.success and dbm_reports_our_boss(set, mod.combatInfo) then
 			set.success = true
 			set.gotboss = set.gotboss or mod.combatInfo.creatureId or true
 			set.mobname = (not set.mobname or set.mobname == L["Unknown"]) and mod.combatInfo.name or set.mobname
@@ -1386,6 +1433,11 @@ do
 				actor.class = "UNKNOWN"
 				self:Debug(format("Unknown unit detected: \124cffffbb00%s\124r (%s)", actorname, actorid))
 			end
+
+			self:LogDebug("actor", "created %s (%s) class=%s enemy=%s fake=%s flags=%s",
+				tostring(actorname), tostring(actorid), tostring(actor.class),
+				tostring(actor.enemy), tostring(actor.fake),
+				type(actorflags) == "number" and Private.DecodeFlags(actorflags) or tostring(actorflags))
 
 			for _, mode in pairs(modes) do
 				-- common

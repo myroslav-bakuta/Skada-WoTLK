@@ -309,6 +309,30 @@ function Private.LogDebugActors(t)
 end
 
 -------------------------------------------------------------------------------
+-- who keeps IsGroupInCombat() true while we are out of combat ourselves.
+-- rate limited: it walks the whole group and the tick runs every second.
+
+local COMBAT_HOLDER_EVERY = 5 -- ticks
+
+function Private.LogDebugCombatHolders(tick)
+	if not enabled or not log then return end
+	if not tick or tick % COMBAT_HOLDER_EVERY ~= 0 then return end
+	if not ns.UnitIterator or not UnitAffectingCombat then return end
+
+	local holders = {}
+	for unit, owner in ns.UnitIterator() do
+		if UnitAffectingCombat(unit) then
+			holders[#holders + 1] = format("%s[%s%s%s]", tostring(UnitName(unit)), unit,
+				owner and ",pet" or "",
+				(UnitIsDeadOrGhost and UnitIsDeadOrGhost(unit)) and ",dead" or "")
+		end
+	end
+
+	ns:LogDebug("combat", "we are out of combat, the group is not: held by %s",
+		#holders > 0 and tconcat(holders, ", ") or "nobody, the flag is stale")
+end
+
+-------------------------------------------------------------------------------
 -- roster snapshot: the table every "is this actor in my group" check reads
 
 function Private.LogDebugRoster(reason)

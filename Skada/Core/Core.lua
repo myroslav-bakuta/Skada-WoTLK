@@ -8,7 +8,7 @@ local DBI = LibStub("LibDBIcon-1.0", true)
 
 -- cache frequently used globals
 local _G = _G
-local next, pairs, type, tonumber, tostring, min, max = next, pairs, type, tonumber, tostring, math.min, math.max
+local next, pairs, type, tonumber, tostring, min, max, floor = next, pairs, type, tonumber, tostring, math.min, math.max, math.floor
 local strmatch, format, gsub, strlower, strfind = strmatch, string.format, string.gsub, string.lower, string.find
 local Private, GetCreatureId = ns.Private, Skada.GetCreatureId
 local tsort, tremove, wipe, setmetatable = table.sort, Private.tremove, wipe, setmetatable
@@ -89,11 +89,24 @@ local pet_activity = nil
 -- diagnostics: what the 1s combat tick saw while a segment was open, and how
 -- long the group stayed out of combat between two segments.
 local last_combat_end = nil
-local tick_stats = {ticks = 0, lockdown = 0, group = 0, pets = 0, pets_only = 0}
+local tick_stats = {ticks = 0, lockdown = 0, group = 0, pets = 0, pets_only = 0, stale = 0}
+
+-- the whole group has to stay out of combat this long before we call the fight
+-- over. a single 1s sample is not enough: unit combat flags flicker between
+-- trash packs and used to chop one pull into several segments.
+local COMBAT_END_GRACE = 3
+
+-- UnitAffectingCombat can stay stuck on a group member for minutes, which kept
+-- segments running long after everything was dead. a quiet combat log outranks
+-- the flag: nothing logged for this long, and us out of combat, means over.
+local COMBAT_IDLE_TIMEOUT = 10
+
+local out_of_combat_since = nil
 
 local function reset_tick_stats()
-	tick_stats.ticks, tick_stats.lockdown = 0, 0
+	tick_stats.ticks, tick_stats.lockdown, tick_stats.stale = 0, 0, 0
 	tick_stats.group, tick_stats.pets, tick_stats.pets_only = 0, 0, 0
+	out_of_combat_since = nil
 end
 
 local function log_segment_gap(how)
@@ -2664,7 +2677,9 @@ function Skada:NewPhase()
 	self:Printf(L["\124cffffbb00%s\124r - \124cff00ff00Phase %s\124r started."], set.mobname or L["Unknown"], set.phase)
 end
 
-function combat_end()
+-- curtime lets the caller date the end to when combat actually stopped, which
+-- is earlier than now whenever we waited out a grace period.
+function combat_end(curtime)
 	if not Skada.current then return end
 
 	if Skada.debuglog_on then
@@ -2680,15 +2695,19 @@ function combat_end()
 			tostring(set.mobname), tostring(set.time), tostring(set.gotboss), tostring(set.success),
 			tostring(set.stopped), tostring(set.type), tostring(set.damage), tostring(set.heal), count)
 		Skada:LogDebug("segment", "  actors: %s", table.concat(names, ", "))
-		Skada:LogDebug("segment", "  ticks=%d of which lockdown=%d groupInCombat=%d petsInCombat=%d petsAlone=%d",
-			tick_stats.ticks, tick_stats.lockdown, tick_stats.group, tick_stats.pets, tick_stats.pets_only)
+		Skada:LogDebug("segment", "  ticks=%d of which lockdown=%d groupInCombat=%d petsInCombat=%d petsAlone=%d staleCombat=%d",
+			tick_stats.ticks, tick_stats.lockdown, tick_stats.group, tick_stats.pets,
+			tick_stats.pets_only, tick_stats.stale)
 	end
 
 	Private.ClearTempUnits()
 	wipe(GetCreatureId) -- wipe cached creature IDs
 
 	-- trigger events.
-	local curtime = time()
+	curtime = curtime or time()
+	if curtime < Skada.current.starttime then
+		curtime = time() -- never date a segment before it began
+	end
 	Skada:SendMessage("COMBAT_PLAYER_LEAVE", Skada.current, curtime)
 	if Skada.current.gotboss then
 		Skada:SendMessage("COMBAT_ENCOUNTER_END", Skada.current, curtime)
@@ -2952,20 +2971,41 @@ do
 		if group then tick_stats.group = tick_stats.group + 1 end
 		if pets then tick_stats.pets = tick_stats.pets + 1 end
 
+		-- pvp and arena segments are ended by their own events
+		if Skada.insType == "pvp" or Skada.insType == "arena" then return end
+
+		-- stuck combat flag: trust the combat log going quiet instead
+		local idle = Skada._Time and (GetTime() - Skada._Time) or 0
+		if not lockdown and idle >= COMBAT_IDLE_TIMEOUT then
+			tick_stats.stale = tick_stats.stale + 1
+			Skada:Debug("\124cffffbb00EndSegment\124r: Combat Log Idle")
+			Skada:LogDebug("segment", "combat log quiet for %d s, ending the segment (groupInCombat=%s petsInCombat=%s)",
+				floor(idle), tostring(group), tostring(pets))
+			combat_end(Skada._time - floor(idle))
+			return
+		end
+
 		if lockdown or group or pets then
 			-- the pet grace alone is holding this segment open
 			if pets and not lockdown and not group then
 				tick_stats.pets_only = tick_stats.pets_only + 1
 			end
+			if not lockdown and group and Skada.debuglog_on then
+				Private.LogDebugCombatHolders(tick_stats.ticks)
+			end
+			out_of_combat_since = nil
 			return
 		end
 
-		if Skada.insType == "pvp" or Skada.insType == "arena" then return end
+		-- wait out the grace before calling it, and date the end to the moment
+		-- combat actually stopped rather than to the end of the grace.
+		out_of_combat_since = out_of_combat_since or Skada._time
+		if Skada._time - out_of_combat_since < COMBAT_END_GRACE then return end
 
 		Skada:Debug("\124cffffbb00EndSegment\124r: Combat Tick")
-		Skada:LogDebug("segment", "combat tick ends the segment: lockdown=%s groupInCombat=%s petsInCombat=%s insType=%s",
-			tostring(lockdown), tostring(group), tostring(pets), tostring(Skada.insType))
-		combat_end()
+		Skada:LogDebug("segment", "combat tick ends the segment after %d s out of combat: lockdown=%s groupInCombat=%s petsInCombat=%s insType=%s",
+			Skada._time - out_of_combat_since, tostring(lockdown), tostring(group), tostring(pets), tostring(Skada.insType))
+		combat_end(out_of_combat_since)
 	end
 
 	function combat_start()

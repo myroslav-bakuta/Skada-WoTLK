@@ -26,7 +26,8 @@ local once_count = 0
 local trace_left = 0
 local enabled = false
 local verbose = false
-local start_clock = 0
+local start_clock = 0 -- GetTime() when the session started
+local start_time = 0 -- time() when the session started
 
 -------------------------------------------------------------------------------
 -- combat log flag decoding
@@ -77,8 +78,12 @@ end
 -------------------------------------------------------------------------------
 -- the log itself
 
+-- both halves come from GetTime, the only monotonic clock we have. taking
+-- the seconds from date() and the fraction from GetTime let the two drift,
+-- so lines logged milliseconds apart could print out of order.
 local function stamp()
-	return format("%s.%03d", date("%H:%M:%S"), (GetTime() - start_clock) % 1 * 1000)
+	local elapsed = GetTime() - start_clock
+	return format("%s.%03d", date("%H:%M:%S", start_time + elapsed), elapsed % 1 * 1000)
 end
 
 -- writes one line. never errors: a broken format string must not break combat.
@@ -135,7 +140,7 @@ end
 
 local function new_session(db)
 	log, once, once_count = {}, {}, 0
-	start_clock = GetTime()
+	start_clock, start_time = GetTime(), time()
 
 	db.sessions = db.sessions or {}
 	tinsert(db.sessions, {started = date("%Y-%m-%d %H:%M:%S"), lines = log})

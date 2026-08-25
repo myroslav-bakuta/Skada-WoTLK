@@ -740,7 +740,9 @@ ns.creature_to_boss = {
 --
 -- fights left out on purpose, they have no death to key on and still need a
 -- boss mod: Valithria Dreamwalker (healed, never dies), Faction Champions
--- (only part of the roster spawns) and Mimiron (his parts die once per phase).
+-- (only part of the roster spawns), Mimiron (his parts die once per phase) and
+-- the Icecrown Gunship Battle (neither ship nor either commander ever dies,
+-- the loser's ship simply pulls away).
 
 ns.fight_to_boss = {
 	[L["Ingvar the Plunderer"]] = 23980, -- only the undead Ingvar stays down
@@ -749,10 +751,6 @@ ns.fight_to_boss = {
 	[L["Auriaya"]] = 33515, -- Auriaya (after Sentries & Feral Defender)
 	[L["Yogg-Saron"]] = 33288, -- Yogg-Saron (after Brain & Guardians)
 	[L["The Northrend Beasts"]] = 34797, -- Icehowl, always the last of the three
-
-	-- the gunship ends with the enemy commander, and which one that is
-	-- depends on the raid's faction, so the first of them to die wins.
-	[L["Icecrown Gunship Battle"]] = {any = true, 36939, 37200},
 
 	[L["Blood Prince Council"]] = {37970, 37972, 37973}, -- Valanar, Keleseth, Taldaram
 	[L["Skarvald and Dalronn"]] = {24200, 24201}, -- either jarl may die first

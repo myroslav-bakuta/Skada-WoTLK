@@ -280,7 +280,7 @@ local function process_set(set, curtime, mobname)
 	curtime = curtime or time()
 
 	-- remove any additional keys.
-	set.started, set.stopped = nil, nil
+	set.started, set.stopped, set.success_src = nil, nil, nil
 	set.gotboss = set.gotboss or nil -- remove false
 
 	if not P.onlykeepbosses or set.gotboss then

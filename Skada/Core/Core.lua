@@ -83,6 +83,20 @@ local function track_fight_kills(fight)
 	end
 end
 
+-- "36939, 37200 (any)" out of the ids still owed, for the debug log only.
+local function pending_kills_str()
+	if not pending_kills then return "no" end
+
+	local list = TempTable()
+	for id in pairs(pending_kills) do
+		list[#list + 1] = tostring(id)
+	end
+
+	local out = format("%s%s", list:concat(", "), pending_any and " (any)" or "")
+	list:free()
+	return out
+end
+
 -- last time a group pet or guardian showed up in the combat log.
 local pet_activity = nil
 
@@ -2588,6 +2602,7 @@ local function BossDefeated()
 	if not set or set.success then return end
 
 	set.success = true
+	if Skada.debuglog_on then set.success_src = "death" end
 
 	-- phase segments.
 	if Skada.tempsets then
@@ -2715,9 +2730,13 @@ function combat_end(curtime)
 					actor.enemy and ",enemy" or "", tostring(actor.damage), tostring(actor.heal))
 			end
 		end
-		Skada:LogDebug("segment", "ending %s: time=%s gotboss=%s success=%s stopped=%s type=%s damage=%s heal=%s actors=%d",
+		Skada:LogDebug("segment", "ending %s: time=%s gotboss=%s success=%s (source=%s) stopped=%s type=%s damage=%s heal=%s actors=%d",
 			tostring(set.mobname), tostring(elapsed), tostring(set.gotboss), tostring(set.success),
+			tostring(set.success_src or "none"),
 			tostring(set.stopped), tostring(set.type), tostring(set.damage), tostring(set.heal), count)
+		if pending_kills and not set.success then
+			Skada:LogDebug("segment", "  unresolved pending kills: %s", pending_kills_str())
+		end
 		Skada:LogDebug("segment", "  actors: %s", table.concat(names, ", "))
 		Skada:LogDebug("segment", "  ticks=%d of which lockdown=%d groupInCombat=%d petsInCombat=%d petsAlone=%d staleCombat=%d",
 			tick_stats.ticks, tick_stats.lockdown, tick_stats.group, tick_stats.pets,
@@ -3245,15 +3264,21 @@ do
 					Skada:PrintFirstHit()
 					_targets = del(_targets)
 					Skada:Debug(format("\124cffffbb00Boss Check\124r: %s (%s) - match, gotboss=%s", t.dstName or "?", GetCreatureId(t.dstGUID) or 0, tostring(set.gotboss)))
-					Skada:LogDebug("boss", "detected %s from %s (%s), gotboss=%s, pending kills=%s",
-						tostring(set.mobname), tostring(t.dstName), tostring(GetCreatureId(t.dstGUID)),
-						tostring(set.gotboss), pending_kills and "yes" or "no")
+					if Skada.debuglog_on then
+						Skada:LogDebug("boss", "detected %s from %s (%s), gotboss=%s, pending kills=%s",
+							tostring(set.mobname), tostring(t.dstName), tostring(GetCreatureId(t.dstGUID)),
+							tostring(set.gotboss), pending_kills_str())
+					end
 				else
 					_targets = _targets or new()
 					_targets[t.dstName] = true
 					set.gotboss = false
 					Skada:Debug(format("\124cffffbb00Boss Check\124r: %s (%s) - no match", t.dstName or "?", GetCreatureId(t.dstGUID) or 0))
-					Skada:LogDebug("boss", "no match for %s (%s)", tostring(t.dstName), tostring(GetCreatureId(t.dstGUID)))
+					if Skada.debuglog_on then
+						local id = GetCreatureId(t.dstGUID)
+						Skada:LogDebug("boss", "no match for %s (%s)%s", tostring(t.dstName), tostring(id),
+							Skada.creature_to_trash[id] and " [excluded: mini-boss]" or "")
+					end
 				end
 			end
 		end

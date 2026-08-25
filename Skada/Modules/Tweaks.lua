@@ -17,6 +17,7 @@ Skada:RegisterModule("Tweaks", function(L, P, _, _, _, O)
 			if args.spellid == 72350 or args.spellname == fofrostmourne then
 				if self.current and not self.current.success then
 					self.current.success = true
+					if self.debuglog_on then self.current.success_src = "frostmourne" end
 					self:SendMessage("COMBAT_BOSS_DEFEATED", self.current)
 
 					if self.tempsets then -- phases

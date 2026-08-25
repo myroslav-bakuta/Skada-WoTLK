@@ -1186,13 +1186,19 @@ local function name_matches(haystack, needle)
 end
 
 function Skada:BigWigs(_, _, event, message)
-	if event == "bosskill" and message and self.current and self.current.gotboss then
-		self:LogDebug("bossmod", "BigWigs bosskill: message=%s | set=%s match=%s",
-			tostring(message), tostring(self.current.mobname),
-			tostring(name_matches(message, self.current.mobname)))
+	-- log wipes and the no-segment case too: they look like silence otherwise.
+	if self.debuglog_on and (event == "bosskill" or event == "bosswipe") then
+		local set = self.current
+		self:LogDebug("bossmod", "BigWigs %s: message=%s | set=%s gotboss=%s success=%s | match=%s",
+			tostring(event), tostring(message), set and tostring(set.mobname) or "no set",
+			set and tostring(set.gotboss) or "-", set and tostring(set.success) or "-",
+			set and tostring(name_matches(message, set.mobname)) or "-")
+	end
 
+	if event == "bosskill" and message and self.current and self.current.gotboss then
 		if name_matches(message, self.current.mobname) and not self.current.success then
 			self.current.success = true
+			if self.debuglog_on then self.current.success_src = "BigWigs" end
 
 			if self.tempsets then -- phases
 				for i = 1, #self.tempsets do

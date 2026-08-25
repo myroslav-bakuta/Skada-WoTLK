@@ -256,8 +256,14 @@ function Private.LogDebugHeader()
 		tostring(LibStub and LibStub.minors and LibStub.minors["AceTimer-3.0"]),
 		tostring(LibStub and LibStub.minors and LibStub.minors["AceGUI-3.0"]))
 
-	ns:LogDebug("init", "bossmod=%s DBM=%s BigWigs=%s",
-		tostring(ns.bossmod), tostring(_G.DBM ~= nil), tostring(_G.BigWigs ~= nil))
+	-- boss mod version: mod tables differ between builds, and a fight the mod
+	-- registers without a creature id is exactly what breaks defeat detection.
+	local DBM = _G.DBM
+	ns:LogDebug("init", "bossmod=%s DBM=%s (version=%s rev=%s) BigWigs=%s",
+		tostring(ns.bossmod), tostring(DBM ~= nil),
+		DBM and tostring(DBM.DisplayVersion or DBM.Version) or "-",
+		DBM and tostring(DBM.Revision) or "-",
+		tostring(_G.BigWigs ~= nil))
 
 	local P = ns.profile
 	if P then

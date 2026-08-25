@@ -761,6 +761,21 @@ ns.fight_to_boss = {
 	[L["The Four Horsemen"]] = {16063, 16064, 16065, 30549} -- Zeliek, Korth'azz, Blaumeux, Rivendare
 }
 
+-------------------------------------------------------------------------------
+-- creature_to_trash
+-- named mini-bosses LibBossIDs calls bosses. they are pulled and killed on the
+-- way to a real boss, so they must not start a boss fight or survive the
+-- "keep only boss fights" filter. checked before creature_to_boss, whose
+-- __index reaches into LibBossIDs.
+
+ns.creature_to_trash = {
+	-- [[ Icecrown Citadel ]] --
+	[37025] = true, -- Stinky (before Festergut)
+	[37217] = true, -- Precious (before Rotface)
+	[37533] = true, -- Rimefang (before Sindragosa), not in LibBossIDs yet
+	[37534] = true, -- Spinestalker (before Sindragosa), not in LibBossIDs yet
+}
+
 -- use LibBossIDs-1.0 as backup plan
 local LBI = LibStub("LibBossIDs-1.0")
 setmetatable(ns.creature_to_boss, {__index = LBI.BossIDs})

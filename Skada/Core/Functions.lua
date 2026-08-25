@@ -542,12 +542,15 @@ end
 do
 	local creature_to_fight = Skada.creature_to_fight or Skada.dummyTable
 	local creature_to_boss = Skada.creature_to_boss or Skada.dummyTable
+	local creature_to_trash = Skada.creature_to_trash or Skada.dummyTable
 	local fight_to_boss = Skada.fight_to_boss or Skada.dummyTable
 	local GetCreatureId = Skada.GetCreatureId
 
 	-- checks if the provided guid is a boss
 	function Skada:IsBoss(guid, strict)
 		local id = GetCreatureId(guid)
+		-- ruled out before creature_to_boss, whose __index reaches LibBossIDs
+		if creature_to_trash[id] then return false end
 		if creature_to_boss[id] and creature_to_boss[id] ~= true then
 			if strict then
 				return false
@@ -2002,17 +2005,26 @@ do
 
 		do -- source or destination are bosses
 			local BossIDs = Skada.BossIDs
+			local creature_to_trash = Skada.creature_to_trash or Skada.dummyTable
 			local GetCreatureId = Skada.GetCreatureId
+
+			-- BossIDs is LibBossIDs raw, so the mini-boss list has to be applied
+			-- here too, or Skada calls the same creature a boss in one place and
+			-- trash in another.
+			local function is_boss_id(guid)
+				local id = GetCreatureId(guid)
+				return (not creature_to_trash[id] and BossIDs[id]) or false
+			end
 
 			function ARGS_MT.SourceIsBoss(args)
 				if args._srcIsBoss == nil then
-					args._srcIsBoss = BossIDs[GetCreatureId(args.srcGUID)] or false
+					args._srcIsBoss = is_boss_id(args.srcGUID)
 				end
 				return args._srcIsBoss
 			end
 			function ARGS_MT.DestIsBoss(args)
 				if args._dstIsBoss == nil then
-					args._dstIsBoss = BossIDs[GetCreatureId(args.dstGUID)] or false
+					args._dstIsBoss = is_boss_id(args.dstGUID)
 				end
 				return args._dstIsBoss
 			end

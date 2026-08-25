@@ -7,7 +7,7 @@
 ## SavedVariablesPerCharacter: SkadaImprovementDB
 ## DefaultState: disabled
 ## Author: Kader (|cff808080bkader#5341|r)
-## Version: 1.9.4
+## Version: 1.9.5
 
 Locales.lua
 SkadaImprovement.lua

@@ -599,6 +599,11 @@ ns.creature_to_fight = {
 	[37934] = L["Valithria Dreamwalker"], -- Blistering Zombie
 	[37985] = L["Valithria Dreamwalker"], -- Dream Cloud
 
+	-- here only to translate the segment name: she is hit from the first second
+	-- of the pull, through the Mana Barrier, so the fight is detected at once.
+	-- her adds (37949, 37890) live entirely inside the segment and need nothing.
+	[36855] = L["Lady Deathwhisper"], -- Lady Deathwhisper
+
 	-- [[ Utgarde Keep ]] --
 	-- both fights carry on past a death: Annhylde raises Ingvar as an undead
 	-- with a creature id of its own, and the first of the two jarls to fall

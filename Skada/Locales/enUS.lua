@@ -901,5 +901,6 @@ L["The Iron Council"] = true
 L["The Northrend Beasts"] = true
 L["Thorim"] = true
 L["Twin Val'kyr"] = true
+L["Lady Deathwhisper"] = true
 L["Valithria Dreamwalker"] = true
 L["Yogg-Saron"] = true

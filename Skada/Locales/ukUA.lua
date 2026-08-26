@@ -910,6 +910,7 @@ ns.ukLocale = {
 	["The Northrend Beasts"] = "Чудовиська Нордскола",
 	["Thorim"] = "Торім",
 	["Twin Val'kyr"] = "Валькірії-близнючки",
+	["Lady Deathwhisper"] = "Леді Смертний Шепіт",
 	["Valithria Dreamwalker"] = "Валітрія Сноходиця",
 	["Yogg-Saron"] = "Йоґґ-Сарон",
 }

@@ -314,9 +314,13 @@ local function process_set(set, curtime, mobname)
 			set.time = max(1, set.endtime - set.starttime)
 			set.name = check_set_name(set)
 
-			-- always keep boss fights
+			-- always keep boss fights. an aborted pull counts as one, so log
+			-- what is being pinned: a 34s segment with no damage in it is kept
+			-- for good and only the user can delete it again.
 			if set.gotboss and P.alwayskeepbosses then
 				set.keep = true
+				Skada:LogDebug("segment", "  pinned by alwayskeepbosses: time=%s success=%s damage=%s",
+					tostring(set.time), tostring(set.success), tostring(set.damage))
 			end
 
 			for i = 1, #modes do
@@ -2773,6 +2777,22 @@ function combat_end(curtime)
 		Skada:SendMessage("COMBAT_PVP_END", nil, Skada.insType)
 	end
 
+	-- work out why a segment would be dropped while we can still read it:
+	-- process_set recycles it, and one line naming three possible reasons is
+	-- no better than no line at all.
+	local drop_reason
+	if Skada.debuglog_on then
+		local set = Skada.current
+		if P.onlykeepbosses and not set.gotboss then
+			drop_reason = "no boss and onlykeepbosses is on"
+		elseif set.mobname == nil then
+			drop_reason = "no mobname"
+		elseif not P.inCombat and curtime - set.starttime < (P.minsetlength or 5) then
+			drop_reason = format("shorter than minsetlength=%s (%d s)",
+				tostring(P.minsetlength), curtime - set.starttime)
+		end
+	end
+
 	-- process segment; nil means it was discarded and recycled,
 	-- so nothing below may touch Skada.current again.
 	local last_set = process_set(Skada.current, curtime)
@@ -2782,8 +2802,7 @@ function combat_end(curtime)
 			Skada:LogDebug("segment", "  saved as \"%s\" time=%s keep=%s", tostring(last_set.name),
 				tostring(last_set.time), tostring(last_set.keep))
 		else
-			Skada:LogDebug("segment", "  discarded: shorter than minsetlength=%s, or it had no mobname, or onlykeepbosses=%s",
-				tostring(P.minsetlength), tostring(P.onlykeepbosses))
+			Skada:LogDebug("segment", "  discarded: %s", drop_reason or "unknown")
 		end
 	end
 
@@ -3292,8 +3311,12 @@ do
 					_targets = del(_targets)
 					Skada:Debug(format("\124cffffbb00Boss Check\124r: %s (%s) - match, gotboss=%s", t.dstName or "?", GetCreatureId(t.dstGUID) or 0, tostring(set.gotboss)))
 					if Skada.debuglog_on then
-						Skada:LogDebug("boss", "detected %s from %s (%s), gotboss=%s, pending kills=%s",
+						-- how far into the segment the pull happened: everything
+						-- before it is trash the boss segment ends up counting,
+						-- and it is routinely half the segment.
+						Skada:LogDebug("boss", "detected %s from %s (%s) at +%d s of the segment, gotboss=%s, pending kills=%s",
 							tostring(set.mobname), tostring(t.dstName), tostring(GetCreatureId(t.dstGUID)),
+							set.starttime and (time() - set.starttime) or 0,
 							tostring(set.gotboss), pending_kills_str())
 					end
 				else

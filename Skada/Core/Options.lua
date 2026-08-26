@@ -375,11 +375,14 @@ options.args.generaloptions = {
 							desc = L["opt_uklang_desc"],
 							width = "full",
 							order = 1,
+							-- stored by the SkadaLocale addon, which loads
+							-- before Skada so Init.lua can read it in time.
 							get = function()
-								return Skada.global.uklang ~= false
+								return not (SkadaLocaleDB and SkadaLocaleDB.uklang == false)
 							end,
 							set = function(_, value)
-								Skada.global.uklang = value
+								SkadaLocaleDB = SkadaLocaleDB or {}
+								SkadaLocaleDB.uklang = value
 								ReloadUI()
 							end,
 							confirm = function() return L["This change requires a UI reload. Are you sure?"] end

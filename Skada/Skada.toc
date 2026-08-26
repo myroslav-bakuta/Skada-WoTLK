@@ -2,6 +2,7 @@
 ## Title: Skada
 ## Notes: Modular damage meter.
 ## Notes-ruRU: Вимірювач шкоди.
+## Dependencies: SkadaLocale
 ## OptionalDeps: Ace3, LibSharedMedia-3.0, LibDBIcon-1.0, AceGUI-3.0-SharedMediaWidgets, LibBossIDs-1.0, LibFail-1.0
 ## LoadOnDemand: 0
 ## SavedVariables: SkadaDB, SkadaDebugLog

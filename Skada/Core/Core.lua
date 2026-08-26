@@ -141,8 +141,26 @@ end
 -- frozen segment on a timer instead, so the next pull gets its own.
 -- only automatic stops count; "/skada stop" must stay stopped until resumed.
 local AUTOSTOP_CLOSE = 5
-ns.AUTOSTOP_CLOSE = AUTOSTOP_CLOSE
+ns.AUTOSTOP_CLOSE = AUTOSTOP_CLOSE -- the default the options fall back on
 local autostop_deadline = nil
+local function autostop_close()
+	return max(1, P.autostopclose or AUTOSTOP_CLOSE)
+end
+
+-- a trash pull that runs into a boss used to hand the boss its whole history:
+-- across three raid nights a third of every boss segment was the trash before
+-- the pull, which drags the fight length up and everyone's numbers down. once
+-- the segment has been running on non-boss targets this long, give the boss a
+-- segment of its own instead.
+--
+-- creatures that belong to a fight must be in creature_to_boss, or their phase
+-- is cut off here: Lady Deathwhisper's phase one is fought entirely on adds.
+local BOSS_SPLIT_TIME = 30
+ns.BOSS_SPLIT_TIME = BOSS_SPLIT_TIME
+local function boss_split_time()
+	if P.bosssplit == false then return end
+	return max(5, P.bosssplittime or BOSS_SPLIT_TIME)
+end
 
 local out_of_combat_since = nil
 
@@ -2912,7 +2930,7 @@ function Skada:StopSegment(msg, phase, auto)
 	end
 
 	stopped_since = stopped_since or GetTime()
-	autostop_deadline = auto and (GetTime() + AUTOSTOP_CLOSE) or nil
+	autostop_deadline = auto and (GetTime() + autostop_close()) or nil
 
 	self:Print(msg or L["Segment Stopped."])
 	self:LogDebug("segment", "stopped: %s (mobname=%s time=%s auto=%s)", tostring(msg or L["Segment Stopped."]),
@@ -3071,7 +3089,7 @@ do
 			autostop_deadline = nil
 			Skada:Debug("\124cffffbb00EndSegment\124r: Stopped Segment")
 			Skada:LogDebug("segment", "closing the stopped segment %d s after it was stopped (lockdown=%s groupInCombat=%s petsInCombat=%s)",
-				AUTOSTOP_CLOSE, tostring(lockdown), tostring(group), tostring(pets))
+				autostop_close(), tostring(lockdown), tostring(group), tostring(pets))
 			combat_end()
 			return
 		end
@@ -3303,6 +3321,21 @@ do
 			if not _targets or not _targets[t.dstName] then
 				local isboss, bossid, bossname = Skada:IsEncounter(t.dstGUID, t.dstName)
 				if isboss then -- found?
+					-- gotboss == false means this segment already ruled a target
+					-- out, so it started on something that is not this fight.
+					-- hand the boss a segment of its own rather than let it
+					-- adopt all that trash.
+					local split = boss_split_time()
+					if split and set.gotboss == false and not set.stopped and set.starttime then
+						local elapsed = time() - set.starttime
+						if elapsed >= split then
+							Skada:LogDebug("segment", "%s pulled %d s into a segment that is not its fight, splitting",
+								tostring(bossname or t.dstName), elapsed)
+							combat_end()
+							return -- the next event opens a fresh segment for the boss
+						end
+					end
+
 					set.mobname = bossname or set.mobname or t.dstName
 					set.gotboss = bossid or true
 					track_fight_kills(set.mobname)

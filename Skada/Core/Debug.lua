@@ -275,8 +275,10 @@ function Private.LogDebugHeader()
 			"profile smartstop=%s smartwait=%s autostop=%s tentativecombatstart=%s",
 			tostring(P.smartstop), tostring(P.smartwait),
 			tostring(P.autostop), tostring(P.tentativecombatstart))
-		ns:LogDebug("init", "profile stalecombat=%s stalecombattime=%s",
-			tostring(P.stalecombat), tostring(P.stalecombattime))
+		ns:LogDebug("init", "profile stalecombat=%s stalecombattime=%s combatgrace=%s",
+			tostring(P.stalecombat), tostring(P.stalecombattime), tostring(P.combatgrace))
+		ns:LogDebug("init", "profile autostopclose=%s bosssplit=%s bosssplittime=%s",
+			tostring(P.autostopclose), tostring(P.bosssplit), tostring(P.bosssplittime))
 		ns:LogDebug("init",
 			"profile timemesure=%s minsetlength=%s updatefrequency=%s hidesolo=%s syncoff=%s",
 			tostring(P.timemesure), tostring(P.minsetlength),

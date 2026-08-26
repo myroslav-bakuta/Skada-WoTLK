@@ -81,7 +81,7 @@ Bundled languages are English, Russian and Ukrainian. The German, Spanish, Frenc
 
 ### Housekeeping
 
-* Version declared consistently in all three addons, currently 1.9.5. The two plugins previously had no version field at all.
+* Version declared consistently in all three addons, currently 1.9.6. The two plugins previously had no version field at all.
 * `X-Curse-Project-ID` removed, since this fork is not connected to the upstream Curse project.
 
 ## Not audited

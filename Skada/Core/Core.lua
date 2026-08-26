@@ -153,8 +153,10 @@ end
 -- the segment has been running on non-boss targets this long, give the boss a
 -- segment of its own instead.
 --
--- creatures that belong to a fight must be in creature_to_boss, or their phase
--- is cut off here: Lady Deathwhisper's phase one is fought entirely on adds.
+-- only a segment that already ruled a target out (gotboss == false) can split,
+-- so a fight the group opens on the boss is never touched. an add that lands
+-- the first hit before the boss does needs an entry in creature_to_boss, or it
+-- opens the segment on its own and the boss then splits away from its own adds.
 local BOSS_SPLIT_TIME = 30
 ns.BOSS_SPLIT_TIME = BOSS_SPLIT_TIME
 local function boss_split_time()

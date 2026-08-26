@@ -134,13 +134,23 @@ local function combat_idle_timeout()
 	return max(combat_end_grace(), P.stalecombattime or COMBAT_IDLE_TIMEOUT)
 end
 
+-- a segment frozen by smart stop collects nothing, yet it used to sit there
+-- until the group left combat. a raid that walks into the next boss without
+-- ever dropping combat had that whole fight thrown away: one ICC run lost
+-- Festergut entirely, 54271 combat log events over 8.5 minutes. close the
+-- frozen segment on a timer instead, so the next pull gets its own.
+-- only automatic stops count; "/skada stop" must stay stopped until resumed.
+local AUTOSTOP_CLOSE = 5
+ns.AUTOSTOP_CLOSE = AUTOSTOP_CLOSE
+local autostop_deadline = nil
+
 local out_of_combat_since = nil
 
 local function reset_tick_stats()
 	tick_stats.ticks, tick_stats.lockdown, tick_stats.stale = 0, 0, 0
 	tick_stats.group, tick_stats.pets, tick_stats.pets_only = 0, 0, 0
 	dropped_events, dropped_time, stopped_since = 0, 0, nil
-	out_of_combat_since = nil
+	out_of_combat_since, autostop_deadline = nil, nil
 end
 
 local function log_segment_gap(how)
@@ -2843,7 +2853,10 @@ function combat_end(curtime)
 	pending_kills, pending_any = del(pending_kills), false
 end
 
-function Skada:StopSegment(msg, phase)
+-- auto is set by the callers that stop a segment on their own (smart stop after
+-- a boss dies, autostop on a wipe): those close on a timer, see AUTOSTOP_CLOSE.
+-- a stop the user asked for has no deadline and waits for ResumeSegment.
+function Skada:StopSegment(msg, phase, auto)
 	local curtime = self.current and time()
 	if not curtime then return end
 
@@ -2880,10 +2893,11 @@ function Skada:StopSegment(msg, phase)
 	end
 
 	stopped_since = stopped_since or GetTime()
+	autostop_deadline = auto and (GetTime() + AUTOSTOP_CLOSE) or nil
 
 	self:Print(msg or L["Segment Stopped."])
-	self:LogDebug("segment", "stopped: %s (mobname=%s time=%s)", tostring(msg or L["Segment Stopped."]),
-		tostring(self.current.mobname), tostring(self.current.time))
+	self:LogDebug("segment", "stopped: %s (mobname=%s time=%s auto=%s)", tostring(msg or L["Segment Stopped."]),
+		tostring(self.current.mobname), tostring(self.current.time), auto and "yes" or "no")
 	self:RegisterEvent("PLAYER_REGEN_ENABLED")
 end
 
@@ -2925,6 +2939,7 @@ function Skada:ResumeSegment(msg, index)
 		dropped_time = dropped_time + (GetTime() - stopped_since)
 		stopped_since = nil
 	end
+	autostop_deadline = nil
 
 	self:Print(msg or L["Segment Resumed."])
 	self:LogDebug("segment", "resumed: %s (%d events dropped over %.1f s so far)",
@@ -3029,6 +3044,18 @@ do
 
 		-- pvp and arena segments are ended by their own events
 		if Skada.insType == "pvp" or Skada.insType == "arena" then return end
+
+		-- a segment frozen by smart stop or autostop records nothing, so close
+		-- it on its own deadline. waiting for the group to leave combat used to
+		-- swallow the next boss whole when the raid pulled without a break.
+		if autostop_deadline and Skada.current.stopped and GetTime() >= autostop_deadline then
+			autostop_deadline = nil
+			Skada:Debug("\124cffffbb00EndSegment\124r: Stopped Segment")
+			Skada:LogDebug("segment", "closing the stopped segment %d s after it was stopped (lockdown=%s groupInCombat=%s petsInCombat=%s)",
+				AUTOSTOP_CLOSE, tostring(lockdown), tostring(group), tostring(pets))
+			combat_end()
+			return
+		end
 
 		-- stuck combat flag: trust the combat log going quiet instead
 		local timeout = combat_idle_timeout()
@@ -3290,7 +3317,7 @@ do
 			-- If we reached the treshold for stopping the segment, do so.
 			if death_counter >= starting_members * 0.5 and not set.stopped then
 				Skada:SendMessage("COMBAT_PLAYER_WIPE", set)
-				Skada:StopSegment(L["Stopping for wipe."])
+				Skada:StopSegment(L["Stopping for wipe."], nil, true)
 			end
 		elseif event == "SPELL_RESURRECT" and src_is_interesting_nopets then
 			death_counter = death_counter - 1

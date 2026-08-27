@@ -2037,8 +2037,27 @@ do
 		end
 	end
 
+	-- pack major.minor.patch into one comparable number, a thousand per slot.
+	-- simply deleting the dots made every component share a decimal column, so
+	-- "1.9.10" came out as 1910 against 196 for "1.9.6" and a newer patch read
+	-- as a hugely newer version. anything unparsable stays 0 and is ignored.
 	function convert_version(ver)
-		return tonumber(type(ver) == "string" and gsub(ver, "%.", "", 2) or ver) or 0
+		if type(ver) == "number" then
+			return ver
+		elseif type(ver) ~= "string" then
+			return 0
+		end
+
+		local major, minor, patch = strmatch(ver, "^(%d+)%.(%d+)%.(%d+)")
+		if not major then
+			major, minor = strmatch(ver, "^(%d+)%.(%d+)")
+			patch = 0
+		end
+		if not major then
+			return tonumber(strmatch(ver, "^%d+")) or 0
+		end
+
+		return (tonumber(major) or 0) * 1000000 + (tonumber(minor) or 0) * 1000 + (tonumber(patch) or 0)
 	end
 
 	function Skada:VersionCheck(sender, version)

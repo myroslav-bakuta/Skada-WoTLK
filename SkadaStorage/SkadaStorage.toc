@@ -9,6 +9,6 @@
 ## Author: Kappa
 ## X-Author-Original: Kader (|cff808080bkader#5341|r)
 ## X-Website-Original: https://github.com/bkader/Skada-WoTLK
-## Version: 1.9.6
+## Version: 1.9.7
 
 SkadaStorage.lua

@@ -313,6 +313,29 @@ local function check_set_name(set)
 	return setname -- return reference.
 end
 
+-- unpin the failed attempts kept for a boss we have now killed. matching is by
+-- creature id, so a segment split off the same pull (trash named after the boss)
+-- is left alone: it never carried a gotboss.
+--
+-- a fight with no fight_to_boss entry carries a bare true instead of an id, and
+-- every such fight carries the same one, so there the name has to tell them
+-- apart or killing one would unpin another's wipes.
+local function release_failed_attempts(gotboss, mobname)
+	local by_name = type(gotboss) ~= "number"
+	if by_name and not mobname then return end
+
+	local sets = Skada.sets
+	for i = 1, #sets do
+		local set = sets[i]
+		if set and set.keep and not set.success and set.gotboss == gotboss
+			and (not by_name or set.mobname == mobname) then
+			set.keep = nil
+			Skada:LogDebug("segment", "  unpinned the failed %s attempt saved as \"%s\" (time=%s), superseded by a kill",
+				tostring(set.mobname), tostring(set.name), tostring(set.time))
+		end
+	end
+end
+
 -- process the given set and stores into sv.
 -- returns the set if it survived, nil if it was recycled.
 local tinsert = table.insert
@@ -341,6 +364,14 @@ local function process_set(set, curtime, mobname)
 				set.keep = true
 				Skada:LogDebug("segment", "  pinned by alwayskeepbosses: time=%s success=%s damage=%s",
 					tostring(set.time), tostring(set.success), tostring(set.damage))
+
+				-- a kill supersedes the wipes that led to it: release the earlier
+				-- pinned attempts on the same boss so a long night of progress
+				-- pulls cannot fill the whole segment budget on its own. they are
+				-- only unpinned, so clean_sets trims them in its own time.
+				if set.success then
+					release_failed_attempts(set.gotboss, set.mobname)
+				end
 			end
 
 			for i = 1, #modes do

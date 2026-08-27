@@ -2796,10 +2796,42 @@ function Skada:NewPhase()
 	self:Printf(L["\124cffffbb00%s\124r - \124cff00ff00Phase %s\124r started."], set.mobname or L["Unknown"], set.phase)
 end
 
+-- gotboss is normally the boss creature id, but a fight with no entry in
+-- fight_to_boss (Mimiron) yields a bare true, so the id has to be recovered
+-- from the actors instead. checked only once a segment ends.
+local function is_undying_boss(set)
+	local never_dies = Skada.boss_never_dies
+	if not never_dies then return false end
+	if never_dies[set.gotboss] then return true end
+
+	-- gotboss is true rather than an id: match the enemies we logged instead.
+	if set.gotboss ~= true then return false end
+	for _, actor in pairs(set.actors or Skada.dummyTable) do
+		if actor.enemy and actor.id and never_dies[GetCreatureId(actor.id)] then
+			return true
+		end
+	end
+	return false
+end
+
 -- curtime lets the caller date the end to when combat actually stopped, which
 -- is earlier than now whenever we waited out a grace period.
 function combat_end(curtime)
 	if not Skada.current then return end
+
+	-- a boss that never dies as a unit (see boss_never_dies) leaves no UNIT_DIED
+	-- to key on, so only the boss mod can call the kill, and DBM on 3.3.5 reports
+	-- these late or as a wipe outright. the kill was then saved as a failed pull.
+	-- walking out of the fight with the group still standing is the kill: an
+	-- actual wipe leaves everyone dead and is caught here first. autostop is not
+	-- involved, so this holds whether or not the user enabled it.
+	if not Skada.current.success and Skada.current.gotboss and not IsGroupDead()
+		and is_undying_boss(Skada.current) then
+		Skada.current.success = true
+		if Skada.debuglog_on then Skada.current.success_src = "never-dies" end
+		Skada:LogDebug("boss", "%s does not die as a unit and the group is still up, counting it as a kill",
+			tostring(Skada.current.mobname))
+	end
 
 	if Skada.debuglog_on then
 		local set, count, names = Skada.current, 0, {}

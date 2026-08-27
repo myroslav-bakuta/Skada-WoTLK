@@ -745,7 +745,8 @@ ns.creature_to_boss = {
 --
 -- fights left out on purpose, they have no death to key on and still need a
 -- boss mod: Valithria Dreamwalker (healed, never dies), Faction Champions
--- (only part of the roster spawns), Mimiron (his parts die once per phase) and
+-- (only part of the roster spawns), Mimiron (his parts die once per phase, and
+-- boss_never_dies below closes his fight instead) and
 -- the Icecrown Gunship Battle (neither ship nor either commander ever dies,
 -- the loser's ship simply pulls away).
 
@@ -762,6 +763,29 @@ ns.fight_to_boss = {
 	[L["Twin Val'kyr"]] = {34496, 34497}, -- Eydis Darkbane, Fjola Lightbane
 	[L["The Iron Council"]] = {32857, 32867, 32927}, -- Brundir, Steelbreaker, Molgeim
 	[L["The Four Horsemen"]] = {16063, 16064, 16065, 30549} -- Zeliek, Korth'azz, Blaumeux, Rivendare
+}
+
+-------------------------------------------------------------------------------
+-- boss_never_dies
+-- bosses that are defeated without ever dying as a unit, so no UNIT_DIED can
+-- close their fight. Hodir is freed rather than killed, Thorim turns friendly
+-- and Mimiron ejects from his machine, and all three hand out their loot from
+-- a chest instead of a corpse. that leaves only the boss mod to call the kill,
+-- and DBM on 3.3.5 either reports these late or calls them a wipe outright, so
+-- the segment is saved as a failed pull.
+--
+-- for these ids only, a fight the group walked away from without wiping counts
+-- as a kill. everything else still needs a death or the boss mod, so a genuine
+-- wipe (half the raid dead) is never promoted.
+
+ns.boss_never_dies = {
+	-- [[ Ulduar ]] --
+	-- the three watchers freed from Yogg-Saron's corruption. each one yields
+	-- instead of dying, goes friendly, helps against Yogg-Saron later, and
+	-- leaves his loot in a cache: Winter, Storms and Innovation respectively.
+	[32845] = true, -- Hodir, "I... I am released from his grasp... at last."
+	[32865] = true, -- Thorim, "Stay your arms! I yield!"
+	[33350] = true -- Mimiron, ejects once V-07-TR-0N is downed
 }
 
 -------------------------------------------------------------------------------

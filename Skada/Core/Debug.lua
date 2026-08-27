@@ -314,11 +314,22 @@ end
 -- one line per distinct combat log actor, with every verdict Skada makes about
 -- it. this is what says why somebody never shows up in a segment.
 
+-- guidToClass holds the owner's guid for a pet, not a class, so say which one
+-- it is: a bare guid in the class column reads like a broken lookup.
+local function cached_class(guid)
+	local class = Private.guidToClass[guid]
+	if class == nil then return "nil" end
+
+	local ownerName = Private.guidToName[class]
+	if ownerName == nil then return tostring(class) end
+
+	return format("%s (owner %s)", class, ownerName)
+end
+
 function Private.LogDebugActors(t)
 	if not enabled or not log then return end
 
 	local guidToName = Private.guidToName
-	local guidToClass = Private.guidToClass
 
 	local guid = t.srcGUID
 	if guid and not once["src:" .. guid] then
@@ -327,7 +338,7 @@ function Private.LogDebugActors(t)
 			tostring(t.srcName), guid, Private.DecodeFlags(t.srcFlags),
 			tostring(t:SourceInGroup()), tostring(t:SourceInGroup(true)),
 			tostring(t:SourceIsPet()), tostring(t:SourceIsPet(true)),
-			tostring(guidToName[guid]), tostring(guidToClass[guid]), tostring(t.event))
+			tostring(guidToName[guid]), cached_class(guid), tostring(t.event))
 	end
 
 	guid = t.dstGUID
@@ -337,7 +348,7 @@ function Private.LogDebugActors(t)
 			tostring(t.dstName), guid, Private.DecodeFlags(t.dstFlags),
 			tostring(t:DestInGroup()), tostring(t:DestInGroup(true)),
 			tostring(t:DestIsPet()),
-			tostring(guidToName[guid]), tostring(guidToClass[guid]), tostring(t.event))
+			tostring(guidToName[guid]), cached_class(guid), tostring(t.event))
 	end
 end
 

@@ -1,0 +1,14 @@
+## Interface: 30300
+## Title: Skada: |cff7fff7fLocale|r
+## Title-ruRU: Skada: |cff7fff7fМова|r
+## Notes: Carries Skada's language setting so it is readable before Skada loads.
+## Notes-ruRU: Зберігає налаштування мови Skada, щоб воно читалося до завантаження Skada.
+## SavedVariables: SkadaLocaleDB
+## LoadOnDemand: 0
+## DefaultState: enabled
+## Author: Kappa
+## Version: 1.9.7
+## X-Category: Combat
+## X-License: MIT/X
+
+SkadaLocale.lua

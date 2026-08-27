@@ -17,6 +17,9 @@ Skada:RegisterModule("Nickname", function(L, P, G, _, _, O)
 			return from > #str and "" or strmatch(str, ".*%S", from)
 		end
 
+		-- %a and %w are ascii only, and strupper/strlower walk bytes, so running
+		-- them over a cyrillic name rewrites its continuation bytes and stores
+		-- mojibake. only title case runs of plain latin letters.
 		local function title_case(first, rest)
 			return format("%s%s", strupper(first), strlower(rest))
 		end
@@ -326,7 +329,13 @@ Skada:RegisterModule("Nickname", function(L, P, G, _, _, O)
 				return false, L["Your nickname is too long, max of 12 characters is allowed."]
 			end
 
-			local notallow = strfind(name, "[^a-zA-Z�������%s]")
+			-- lua 5.1 patterns are byte based, so cyrillic cannot be written as a
+			-- character class: strip well formed two byte cyrillic first (U+0400
+			-- to U+04FF is lead 208-210 plus one continuation byte), then whatever
+			-- is left has to be latin letters or spaces. this also rejects a
+			-- truncated sequence, since its lead byte survives the strip.
+			local latin_only = strgsub(name, "[\208-\210][\128-\191]", "")
+			local notallow = strfind(latin_only, "[^a-zA-Z%s]")
 			if notallow then
 				return false, L["Only letters and two spaces are allowed."]
 			end
@@ -347,7 +356,7 @@ Skada:RegisterModule("Nickname", function(L, P, G, _, _, O)
 				return false, L["You can't use the same letter three times consecutively, two spaces consecutively or more then two spaces."]
 			end
 
-			return true, strgsub(name, "(%a)([%w_']*)", title_case)
+			return true, strgsub(name, "([a-zA-Z])([a-zA-Z_']*)", title_case)
 		end
 	end
 

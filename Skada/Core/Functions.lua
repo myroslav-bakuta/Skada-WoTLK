@@ -542,12 +542,15 @@ end
 do
 	local creature_to_fight = Skada.creature_to_fight or Skada.dummyTable
 	local creature_to_boss = Skada.creature_to_boss or Skada.dummyTable
+	local creature_to_trash = Skada.creature_to_trash or Skada.dummyTable
 	local fight_to_boss = Skada.fight_to_boss or Skada.dummyTable
 	local GetCreatureId = Skada.GetCreatureId
 
 	-- checks if the provided guid is a boss
 	function Skada:IsBoss(guid, strict)
 		local id = GetCreatureId(guid)
+		-- ruled out before creature_to_boss, whose __index reaches LibBossIDs
+		if creature_to_trash[id] then return false end
 		if creature_to_boss[id] and creature_to_boss[id] ~= true then
 			if strict then
 				return false
@@ -1183,13 +1186,19 @@ local function name_matches(haystack, needle)
 end
 
 function Skada:BigWigs(_, _, event, message)
-	if event == "bosskill" and message and self.current and self.current.gotboss then
-		self:LogDebug("bossmod", "BigWigs bosskill: message=%s | set=%s match=%s",
-			tostring(message), tostring(self.current.mobname),
-			tostring(name_matches(message, self.current.mobname)))
+	-- log wipes and the no-segment case too: they look like silence otherwise.
+	if self.debuglog_on and (event == "bosskill" or event == "bosswipe") then
+		local set = self.current
+		self:LogDebug("bossmod", "BigWigs %s: message=%s | set=%s gotboss=%s success=%s | match=%s",
+			tostring(event), tostring(message), set and tostring(set.mobname) or "no set",
+			set and tostring(set.gotboss) or "-", set and tostring(set.success) or "-",
+			set and tostring(name_matches(message, set.mobname)) or "-")
+	end
 
+	if event == "bosskill" and message and self.current and self.current.gotboss then
 		if name_matches(message, self.current.mobname) and not self.current.success then
 			self.current.success = true
+			if self.debuglog_on then self.current.success_src = "BigWigs" end
 
 			if self.tempsets then -- phases
 				for i = 1, #self.tempsets do
@@ -1203,48 +1212,115 @@ function Skada:BigWigs(_, _, event, message)
 			self:Debug("\124cffffbb00COMBAT_BOSS_DEFEATED\124r: BigWigs")
 			self:SendMessage("COMBAT_BOSS_DEFEATED", self.current)
 
-			self:StopSegment(L["Smart Stop"])
+			self:StopSegment(L["Smart Stop"], nil, true)
 			self:SetModes()
 		end
 	end
 end
 
--- true when DBM is reporting the fight this segment is tracking. creature ids
--- are locale independent, names are not: on translated realms DBM's name and
--- ours rarely match ("Боевой корабль" against "Бой на кораблях"), which is why
--- the ids come first and the name is only a fallback.
-local function dbm_reports_our_boss(set, info)
-	local id = set.gotboss
-	if type(id) == "number" then
-		if info.mob == id then return true end
-		if info.killMobs and info.killMobs[id] then return true end
+-- one creature id DBM offered against what the segment is tracking. returns the
+-- reason it matched, for the debug log, or nil.
+local creature_to_fight = Skada.creature_to_fight or Skada.dummyTable
+local function id_matches(set, id)
+	if not id then return nil end
+	if set.gotboss == id then return "id" end
+	-- a fight with no death at all (the gunship: two ships, two commanders, none
+	-- of which ever dies) leaves gotboss true, so compare the fight name too.
+	if set.mobname and creature_to_fight[id] == set.mobname then return "fight" end
+	return nil
+end
 
-		local ids = info.multiMobPullDetection
-		if ids then
-			for i = 1, #ids do
-				if ids[i] == id then return true end
-			end
+-- true when DBM is reporting the fight this segment is tracking, plus the rule
+-- that matched. creature ids are locale independent, names are not: on
+-- translated realms DBM's name and ours rarely match ("Боевой корабль" against
+-- "Бой на кораблях"), which is why the ids come first and the name is only a
+-- fallback.
+--
+-- RegisterCombat copies mod.creatureId into combatInfo.mob when it runs, so a
+-- mod that calls SetCreatureID afterwards (GunshipBattle does) leaves mob nil
+-- while the id sits on the mod itself. Read both.
+local function dbm_reports_our_boss(set, info)
+	local mod = info.mod
+
+	local why = id_matches(set, info.mob)
+	if why then return true, "mob:" .. why end
+
+	why = mod and id_matches(set, mod.creatureId)
+	if why then return true, "creatureId:" .. why end
+
+	if info.killMobs then
+		for id in pairs(info.killMobs) do
+			why = id_matches(set, id)
+			if why then return true, "killMobs:" .. why end
 		end
 	end
 
-	return info.name and (not set.mobname or name_matches(set.mobname, info.name)) or false
+	local ids = info.multiMobPullDetection or (mod and mod.multiMobPullDetection)
+	if ids then
+		for i = 1, #ids do
+			why = id_matches(set, ids[i])
+			if why then return true, "multiMob:" .. why end
+		end
+	end
+
+	if info.name and (not set.mobname or name_matches(set.mobname, info.name)) then
+		return true, "name"
+	end
+
+	return false, "none"
+end
+
+-- "12345, 67890" out of a set of creature ids, for the debug log only.
+local function id_list(ids, keys)
+	if not ids then return "-" end
+
+	local list = TempTable()
+	if keys then
+		for id in pairs(ids) do
+			list[#list + 1] = tostring(id)
+		end
+	else
+		for i = 1, #ids do
+			list[#list + 1] = tostring(ids[i])
+		end
+	end
+
+	local out = (#list > 0) and list:concat(", ") or "-"
+	list:free()
+	return out
 end
 
 function Skada:DBM(_, mod, wipe)
-	if not wipe and mod and mod.combatInfo then
+	if mod and mod.combatInfo then
 		local set = self.current or self.last -- just in case DBM was late.
+		local matched, why = nil, nil
 
-		if self.debuglog_on then
-			local info = mod.combatInfo
-			self:LogDebug("bossmod", "DBM EndCombat: name=%s mob=%s | set=%s gotboss=%s success=%s | match=%s",
-				tostring(info.name), tostring(info.mob), set and tostring(set.mobname) or "no set",
-				set and tostring(set.gotboss) or "-", set and tostring(set.success) or "-",
-				set and tostring(dbm_reports_our_boss(set, info)) or "-")
+		if set and (not wipe or self.debuglog_on) then
+			matched, why = dbm_reports_our_boss(set, mod.combatInfo)
 		end
 
-		if set and not set.success and dbm_reports_our_boss(set, mod.combatInfo) then
+		-- log wipes too: a red segment and a silent DBM look the same otherwise.
+		if self.debuglog_on then
+			local info = mod.combatInfo
+			self:LogDebug("bossmod", "DBM EndCombat: mod=%s name=%s wipe=%s",
+				tostring(mod.id), tostring(info.name), wipe and "true" or "false")
+			self:LogDebug("bossmod", "  dbm ids: mob=%s creatureId=%s killMobs=%s multiMob=%s",
+				tostring(info.mob), tostring(mod.creatureId), id_list(info.killMobs, true),
+				id_list(info.multiMobPullDetection or mod.multiMobPullDetection))
+			self:LogDebug("bossmod", "  set=%s gotboss=%s success=%s | match=%s",
+				set and tostring(set.mobname) or "no set",
+				set and tostring(set.gotboss) or "-", set and tostring(set.success) or "-",
+				set and tostring(why) or "-")
+		end
+
+		if not wipe and set and not set.success and matched then
 			set.success = true
-			set.gotboss = set.gotboss or mod.combatInfo.creatureId or true
+			-- only the live segment: self.last already went through process_set,
+			-- so a key added here would be saved to disk with it.
+			if self.debuglog_on and set == self.current then
+				set.success_src = "DBM:" .. tostring(why)
+			end
+			set.gotboss = set.gotboss or mod.combatInfo.mob or mod.creatureId or true
 			set.mobname = (not set.mobname or set.mobname == L["Unknown"]) and mod.combatInfo.name or set.mobname
 
 			if self.tempsets then -- phases
@@ -1252,7 +1328,7 @@ function Skada:DBM(_, mod, wipe)
 					local s = self.tempsets[i]
 					if s and not s.success then
 						s.success = true
-						s.gotboss = s.gotboss or mod.combatInfo.creatureId or true
+						s.gotboss = s.gotboss or mod.combatInfo.mob or mod.creatureId or true
 						s.mobname = (not s.mobname or s.mobname == L["Unknown"]) and mod.combatInfo.name or s.mobname
 					end
 				end
@@ -1261,7 +1337,7 @@ function Skada:DBM(_, mod, wipe)
 			self:Debug("\124cffffbb00COMBAT_BOSS_DEFEATED\124r: DBM")
 			self:SendMessage("COMBAT_BOSS_DEFEATED", set)
 
-			self:StopSegment(L["Smart Stop"])
+			self:StopSegment(L["Smart Stop"], nil, true)
 			self:SetModes()
 		end
 	end
@@ -2002,17 +2078,26 @@ do
 
 		do -- source or destination are bosses
 			local BossIDs = Skada.BossIDs
+			local creature_to_trash = Skada.creature_to_trash or Skada.dummyTable
 			local GetCreatureId = Skada.GetCreatureId
+
+			-- BossIDs is LibBossIDs raw, so the mini-boss list has to be applied
+			-- here too, or Skada calls the same creature a boss in one place and
+			-- trash in another.
+			local function is_boss_id(guid)
+				local id = GetCreatureId(guid)
+				return (not creature_to_trash[id] and BossIDs[id]) or false
+			end
 
 			function ARGS_MT.SourceIsBoss(args)
 				if args._srcIsBoss == nil then
-					args._srcIsBoss = BossIDs[GetCreatureId(args.srcGUID)] or false
+					args._srcIsBoss = is_boss_id(args.srcGUID)
 				end
 				return args._srcIsBoss
 			end
 			function ARGS_MT.DestIsBoss(args)
 				if args._dstIsBoss == nil then
-					args._dstIsBoss = BossIDs[GetCreatureId(args.dstGUID)] or false
+					args._dstIsBoss = is_boss_id(args.dstGUID)
 				end
 				return args._dstIsBoss
 			end
@@ -2389,7 +2474,7 @@ do
 		end
 
 		if set.endtime then return end
-		Skada:StopSegment(L["Smart Stop"])
+		Skada:StopSegment(L["Smart Stop"], nil, true)
 		Skada:SetModes()
 	end
 

@@ -24,9 +24,11 @@ if L then
 	-- Ukrainian in Core\Init.lua, but this addon depends on Skada and loads
 	-- *after* it, re-registering Russian on top. So right here, after the
 	-- Russian strings are set (and before this block returns), we overwrite them
-	-- with Ukrainian, gated on the same account-wide toggle Skada uses: nil
-	-- means "default on", only an explicit false disables it.
-	if not (SkadaDB and SkadaDB.global and SkadaDB.global.uklang == false) then
+	-- with Ukrainian, gated on the same account-wide toggle Skada uses. That
+	-- toggle lives in the SkadaLocale addon (Skada reads it before its own
+	-- saved variables exist), so read it from there. nil means "default on",
+	-- only an explicit false disables it.
+	if not (SkadaLocaleDB and SkadaLocaleDB.uklang == false) then
 		L["Improvement"] = "Покращення"
 		L["Improvement modes"] = "Режими покращення"
 		L["Improvement comparison"] = "Порівняння покращення"

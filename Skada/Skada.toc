@@ -2,14 +2,17 @@
 ## Title: Skada
 ## Notes: Modular damage meter.
 ## Notes-ruRU: Вимірювач шкоди.
+## Dependencies: SkadaLocale
 ## OptionalDeps: Ace3, LibSharedMedia-3.0, LibDBIcon-1.0, AceGUI-3.0-SharedMediaWidgets, LibBossIDs-1.0, LibFail-1.0
 ## LoadOnDemand: 0
 ## SavedVariables: SkadaDB, SkadaDebugLog
 ## SavedVariablesPerCharacter: SkadaCharDB
 ## DefaultState: enabled
-## Author: Kader (|cff808080bkader#5341|r)
-## Version: 1.9.4
-## X-Date: 2026-08-23 @ 18:05 |cff808080UTC|r
+## Author: Kappa
+## X-Author-Original: Kader (|cff808080bkader#5341|r)
+## X-Website-Original: https://github.com/bkader/Skada-WoTLK
+## Version: 1.9.7
+## X-Date: 2026-08-27 @ 07:42 |cff808080UTC|r
 ## X-Credits: Zarnivoop
 ## X-Category: Combat
 ## X-License: MIT/X

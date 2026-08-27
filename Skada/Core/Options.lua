@@ -119,6 +119,9 @@ Skada.defaults = {
 		combatgrace = 3,
 		stalecombat = true,
 		stalecombattime = 10,
+		autostopclose = 5,
+		bosssplit = true,
+		bosssplittime = 30,
 		timemesure = 2,
 		tooltiprows = 3,
 		totalflag = 0x10,
@@ -372,11 +375,14 @@ options.args.generaloptions = {
 							desc = L["opt_uklang_desc"],
 							width = "full",
 							order = 1,
+							-- stored by the SkadaLocale addon, which loads
+							-- before Skada so Init.lua can read it in time.
 							get = function()
-								return Skada.global.uklang ~= false
+								return not (SkadaLocaleDB and SkadaLocaleDB.uklang == false)
 							end,
 							set = function(_, value)
-								Skada.global.uklang = value
+								SkadaLocaleDB = SkadaLocaleDB or {}
+								SkadaLocaleDB.uklang = value
 								ReloadUI()
 							end,
 							confirm = function() return L["This change requires a UI reload. Are you sure?"] end
@@ -997,6 +1003,76 @@ options.args.tweaks = {
 									Skada.profile.combatgrace or Skada.COMBAT_END_GRACE,
 									L["Segment End Delay"])
 							end,
+							order = 40,
+							width = "full"
+						}
+					}
+				},
+				autostop_opt = {
+					type = "group",
+					name = L["Stopped Segment Timeout"],
+					desc = format(L["Options for %s."], L["Stopped Segment Timeout"]),
+					order = 21,
+					args = {
+						autostopdesc = {
+							type = "description",
+							name = L["opt_tweaks_autostopclose_desc"],
+							fontSize = "medium",
+							order = 10,
+							width = "full"
+						},
+						autostopclose = {
+							type = "range",
+							name = L["Duration"],
+							desc = L["opt_tweaks_autostopclose_slider_desc"],
+							min = 1,
+							max = 30,
+							step = 1,
+							bigStep = 1,
+							order = 20
+						},
+						autostopnote = {
+							type = "description",
+							name = L["opt_tweaks_autostopclose_note"],
+							order = 30,
+							width = "full"
+						}
+					}
+				},
+				bosssplit_opt = {
+					type = "group",
+					name = L["Split Late Boss Pulls"],
+					desc = format(L["Options for %s."], L["Split Late Boss Pulls"]),
+					order = 22,
+					args = {
+						splitdesc = {
+							type = "description",
+							name = L["opt_tweaks_bosssplit_desc"],
+							fontSize = "medium",
+							order = 10,
+							width = "full"
+						},
+						bosssplit = {
+							type = "toggle",
+							name = L["Enable"],
+							order = 20
+						},
+						bosssplittime = {
+							type = "range",
+							name = L["Trash Time"],
+							desc = L["opt_tweaks_bosssplittime_desc"],
+							disabled = function()
+								return not Skada.profile.bosssplit
+							end,
+							min = 5,
+							max = 120,
+							step = 5,
+							bigStep = 5,
+							order = 30
+						},
+						splitnote = {
+							type = "description",
+							name = L["opt_tweaks_bosssplit_note"],
 							order = 40,
 							width = "full"
 						}

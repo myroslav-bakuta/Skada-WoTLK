@@ -599,6 +599,11 @@ ns.creature_to_fight = {
 	[37934] = L["Valithria Dreamwalker"], -- Blistering Zombie
 	[37985] = L["Valithria Dreamwalker"], -- Dream Cloud
 
+	-- here only to translate the segment name: she is hit from the first second
+	-- of the pull, through the Mana Barrier, so the fight is detected at once.
+	-- her adds (37949, 37890) live entirely inside the segment and need nothing.
+	[36855] = L["Lady Deathwhisper"], -- Lady Deathwhisper
+
 	-- [[ Utgarde Keep ]] --
 	-- both fights carry on past a death: Annhylde raises Ingvar as an undead
 	-- with a creature id of its own, and the first of the two jarls to fall
@@ -740,7 +745,10 @@ ns.creature_to_boss = {
 --
 -- fights left out on purpose, they have no death to key on and still need a
 -- boss mod: Valithria Dreamwalker (healed, never dies), Faction Champions
--- (only part of the roster spawns) and Mimiron (his parts die once per phase).
+-- (only part of the roster spawns), Mimiron (his parts die once per phase, and
+-- boss_never_dies below closes his fight instead) and
+-- the Icecrown Gunship Battle (neither ship nor either commander ever dies,
+-- the loser's ship simply pulls away).
 
 ns.fight_to_boss = {
 	[L["Ingvar the Plunderer"]] = 23980, -- only the undead Ingvar stays down
@@ -750,15 +758,49 @@ ns.fight_to_boss = {
 	[L["Yogg-Saron"]] = 33288, -- Yogg-Saron (after Brain & Guardians)
 	[L["The Northrend Beasts"]] = 34797, -- Icehowl, always the last of the three
 
-	-- the gunship ends with the enemy commander, and which one that is
-	-- depends on the raid's faction, so the first of them to die wins.
-	[L["Icecrown Gunship Battle"]] = {any = true, 36939, 37200},
-
 	[L["Blood Prince Council"]] = {37970, 37972, 37973}, -- Valanar, Keleseth, Taldaram
 	[L["Skarvald and Dalronn"]] = {24200, 24201}, -- either jarl may die first
 	[L["Twin Val'kyr"]] = {34496, 34497}, -- Eydis Darkbane, Fjola Lightbane
 	[L["The Iron Council"]] = {32857, 32867, 32927}, -- Brundir, Steelbreaker, Molgeim
 	[L["The Four Horsemen"]] = {16063, 16064, 16065, 30549} -- Zeliek, Korth'azz, Blaumeux, Rivendare
+}
+
+-------------------------------------------------------------------------------
+-- boss_never_dies
+-- bosses that are defeated without ever dying as a unit, so no UNIT_DIED can
+-- close their fight. Hodir is freed rather than killed, Thorim turns friendly
+-- and Mimiron ejects from his machine, and all three hand out their loot from
+-- a chest instead of a corpse. that leaves only the boss mod to call the kill,
+-- and DBM on 3.3.5 either reports these late or calls them a wipe outright, so
+-- the segment is saved as a failed pull.
+--
+-- for these ids only, a fight the group walked away from without wiping counts
+-- as a kill. everything else still needs a death or the boss mod, so a genuine
+-- wipe (half the raid dead) is never promoted.
+
+ns.boss_never_dies = {
+	-- [[ Ulduar ]] --
+	-- the three watchers freed from Yogg-Saron's corruption. each one yields
+	-- instead of dying, goes friendly, helps against Yogg-Saron later, and
+	-- leaves his loot in a cache: Winter, Storms and Innovation respectively.
+	[32845] = true, -- Hodir, "I... I am released from his grasp... at last."
+	[32865] = true, -- Thorim, "Stay your arms! I yield!"
+	[33350] = true -- Mimiron, ejects once V-07-TR-0N is downed
+}
+
+-------------------------------------------------------------------------------
+-- creature_to_trash
+-- named mini-bosses LibBossIDs calls bosses. they are pulled and killed on the
+-- way to a real boss, so they must not start a boss fight or survive the
+-- "keep only boss fights" filter. checked before creature_to_boss, whose
+-- __index reaches into LibBossIDs.
+
+ns.creature_to_trash = {
+	-- [[ Icecrown Citadel ]] --
+	[37025] = true, -- Stinky (before Festergut)
+	[37217] = true, -- Precious (before Rotface)
+	[37533] = true, -- Rimefang (before Sindragosa), not in LibBossIDs yet
+	[37534] = true, -- Spinestalker (before Sindragosa), not in LibBossIDs yet
 }
 
 -- use LibBossIDs-1.0 as backup plan

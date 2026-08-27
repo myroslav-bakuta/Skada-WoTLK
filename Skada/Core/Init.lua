@@ -14,11 +14,16 @@ ns.callbacks = LibStub("CallbackHandler-1.0"):New(ns)
 -- Ukrainian language (account-wide, ON by default). The 3.3.5a client has no
 -- ukUA locale, so rather than relying on AceLocale's game-locale gating we
 -- overlay our own translations (Locales\ukUA.lua) onto the active locale table.
--- It's applied unless the user explicitly turned it off in the options: we read
--- straight from the raw saved variable because AceDB hasn't wrapped it (nor
--- applied its defaults) yet at this point of the load, so nil means "default on".
+--
+-- The flag lives in the SkadaLocale addon, not in SkadaDB: the client restores
+-- an addon's own SavedVariables only after all of its files have run, so
+-- SkadaDB is still nil right here. Tables.lua and Options.lua read L[...] while
+-- they load, which fixes every string before SkadaDB ever appears -- that is
+-- why the toggle used to do nothing. SkadaLocale is a separate addon listed in
+-- ## Dependencies, so it is fully loaded (and its saved variable restored)
+-- before this line runs. nil means "default on".
 if ns.ukLocale then
-	if not (SkadaDB and SkadaDB.global and SkadaDB.global.uklang == false) then
+	if not (SkadaLocaleDB and SkadaLocaleDB.uklang == false) then
 		for key, value in pairs(ns.ukLocale) do
 			ns.Locale[key] = value
 		end

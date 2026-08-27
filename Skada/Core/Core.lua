@@ -83,6 +83,20 @@ local function track_fight_kills(fight)
 	end
 end
 
+-- "36939, 37200 (any)" out of the ids still owed, for the debug log only.
+local function pending_kills_str()
+	if not pending_kills then return "no" end
+
+	local list = TempTable()
+	for id in pairs(pending_kills) do
+		list[#list + 1] = tostring(id)
+	end
+
+	local out = format("%s%s", list:concat(", "), pending_any and " (any)" or "")
+	list:free()
+	return out
+end
+
 -- last time a group pet or guardian showed up in the combat log.
 local pet_activity = nil
 
@@ -120,13 +134,43 @@ local function combat_idle_timeout()
 	return max(combat_end_grace(), P.stalecombattime or COMBAT_IDLE_TIMEOUT)
 end
 
+-- a segment frozen by smart stop collects nothing, yet it used to sit there
+-- until the group left combat. a raid that walks into the next boss without
+-- ever dropping combat had that whole fight thrown away: one ICC run lost
+-- Festergut entirely, 54271 combat log events over 8.5 minutes. close the
+-- frozen segment on a timer instead, so the next pull gets its own.
+-- only automatic stops count; "/skada stop" must stay stopped until resumed.
+local AUTOSTOP_CLOSE = 5
+ns.AUTOSTOP_CLOSE = AUTOSTOP_CLOSE -- the default the options fall back on
+local autostop_deadline = nil
+local function autostop_close()
+	return max(1, P.autostopclose or AUTOSTOP_CLOSE)
+end
+
+-- a trash pull that runs into a boss used to hand the boss its whole history:
+-- across three raid nights a third of every boss segment was the trash before
+-- the pull, which drags the fight length up and everyone's numbers down. once
+-- the segment has been running on non-boss targets this long, give the boss a
+-- segment of its own instead.
+--
+-- only a segment that already ruled a target out (gotboss == false) can split,
+-- so a fight the group opens on the boss is never touched. an add that lands
+-- the first hit before the boss does needs an entry in creature_to_boss, or it
+-- opens the segment on its own and the boss then splits away from its own adds.
+local BOSS_SPLIT_TIME = 30
+ns.BOSS_SPLIT_TIME = BOSS_SPLIT_TIME
+local function boss_split_time()
+	if P.bosssplit == false then return end
+	return max(5, P.bosssplittime or BOSS_SPLIT_TIME)
+end
+
 local out_of_combat_since = nil
 
 local function reset_tick_stats()
 	tick_stats.ticks, tick_stats.lockdown, tick_stats.stale = 0, 0, 0
 	tick_stats.group, tick_stats.pets, tick_stats.pets_only = 0, 0, 0
 	dropped_events, dropped_time, stopped_since = 0, 0, nil
-	out_of_combat_since = nil
+	out_of_combat_since, autostop_deadline = nil, nil
 end
 
 local function log_segment_gap(how)
@@ -269,6 +313,29 @@ local function check_set_name(set)
 	return setname -- return reference.
 end
 
+-- unpin the failed attempts kept for a boss we have now killed. matching is by
+-- creature id, so a segment split off the same pull (trash named after the boss)
+-- is left alone: it never carried a gotboss.
+--
+-- a fight with no fight_to_boss entry carries a bare true instead of an id, and
+-- every such fight carries the same one, so there the name has to tell them
+-- apart or killing one would unpin another's wipes.
+local function release_failed_attempts(gotboss, mobname)
+	local by_name = type(gotboss) ~= "number"
+	if by_name and not mobname then return end
+
+	local sets = Skada.sets
+	for i = 1, #sets do
+		local set = sets[i]
+		if set and set.keep and not set.success and set.gotboss == gotboss
+			and (not by_name or set.mobname == mobname) then
+			set.keep = nil
+			Skada:LogDebug("segment", "  unpinned the failed %s attempt saved as \"%s\" (time=%s), superseded by a kill",
+				tostring(set.mobname), tostring(set.name), tostring(set.time))
+		end
+	end
+end
+
 -- process the given set and stores into sv.
 -- returns the set if it survived, nil if it was recycled.
 local tinsert = table.insert
@@ -280,7 +347,7 @@ local function process_set(set, curtime, mobname)
 	curtime = curtime or time()
 
 	-- remove any additional keys.
-	set.started, set.stopped = nil, nil
+	set.started, set.stopped, set.success_src = nil, nil, nil
 	set.gotboss = set.gotboss or nil -- remove false
 
 	if not P.onlykeepbosses or set.gotboss then
@@ -290,9 +357,21 @@ local function process_set(set, curtime, mobname)
 			set.time = max(1, set.endtime - set.starttime)
 			set.name = check_set_name(set)
 
-			-- always keep boss fights
+			-- always keep boss fights. an aborted pull counts as one, so log
+			-- what is being pinned: a 34s segment with no damage in it is kept
+			-- for good and only the user can delete it again.
 			if set.gotboss and P.alwayskeepbosses then
 				set.keep = true
+				Skada:LogDebug("segment", "  pinned by alwayskeepbosses: time=%s success=%s damage=%s",
+					tostring(set.time), tostring(set.success), tostring(set.damage))
+
+				-- a kill supersedes the wipes that led to it: release the earlier
+				-- pinned attempts on the same boss so a long night of progress
+				-- pulls cannot fill the whole segment budget on its own. they are
+				-- only unpinned, so clean_sets trims them in its own time.
+				if set.success then
+					release_failed_attempts(set.gotboss, set.mobname)
+				end
 			end
 
 			for i = 1, #modes do
@@ -1958,8 +2037,27 @@ do
 		end
 	end
 
+	-- pack major.minor.patch into one comparable number, a thousand per slot.
+	-- simply deleting the dots made every component share a decimal column, so
+	-- "1.9.10" came out as 1910 against 196 for "1.9.6" and a newer patch read
+	-- as a hugely newer version. anything unparsable stays 0 and is ignored.
 	function convert_version(ver)
-		return tonumber(type(ver) == "string" and gsub(ver, "%.", "", 2) or ver) or 0
+		if type(ver) == "number" then
+			return ver
+		elseif type(ver) ~= "string" then
+			return 0
+		end
+
+		local major, minor, patch = strmatch(ver, "^(%d+)%.(%d+)%.(%d+)")
+		if not major then
+			major, minor = strmatch(ver, "^(%d+)%.(%d+)")
+			patch = 0
+		end
+		if not major then
+			return tonumber(strmatch(ver, "^%d+")) or 0
+		end
+
+		return (tonumber(major) or 0) * 1000000 + (tonumber(minor) or 0) * 1000 + (tonumber(patch) or 0)
 	end
 
 	function Skada:VersionCheck(sender, version)
@@ -2588,6 +2686,7 @@ local function BossDefeated()
 	if not set or set.success then return end
 
 	set.success = true
+	if Skada.debuglog_on then set.success_src = "death" end
 
 	-- phase segments.
 	if Skada.tempsets then
@@ -2697,10 +2796,42 @@ function Skada:NewPhase()
 	self:Printf(L["\124cffffbb00%s\124r - \124cff00ff00Phase %s\124r started."], set.mobname or L["Unknown"], set.phase)
 end
 
+-- gotboss is normally the boss creature id, but a fight with no entry in
+-- fight_to_boss (Mimiron) yields a bare true, so the id has to be recovered
+-- from the actors instead. checked only once a segment ends.
+local function is_undying_boss(set)
+	local never_dies = Skada.boss_never_dies
+	if not never_dies then return false end
+	if never_dies[set.gotboss] then return true end
+
+	-- gotboss is true rather than an id: match the enemies we logged instead.
+	if set.gotboss ~= true then return false end
+	for _, actor in pairs(set.actors or Skada.dummyTable) do
+		if actor.enemy and actor.id and never_dies[GetCreatureId(actor.id)] then
+			return true
+		end
+	end
+	return false
+end
+
 -- curtime lets the caller date the end to when combat actually stopped, which
 -- is earlier than now whenever we waited out a grace period.
 function combat_end(curtime)
 	if not Skada.current then return end
+
+	-- a boss that never dies as a unit (see boss_never_dies) leaves no UNIT_DIED
+	-- to key on, so only the boss mod can call the kill, and DBM on 3.3.5 reports
+	-- these late or as a wipe outright. the kill was then saved as a failed pull.
+	-- walking out of the fight with the group still standing is the kill: an
+	-- actual wipe leaves everyone dead and is caught here first. autostop is not
+	-- involved, so this holds whether or not the user enabled it.
+	if not Skada.current.success and Skada.current.gotboss and not IsGroupDead()
+		and is_undying_boss(Skada.current) then
+		Skada.current.success = true
+		if Skada.debuglog_on then Skada.current.success_src = "never-dies" end
+		Skada:LogDebug("boss", "%s does not die as a unit and the group is still up, counting it as a kill",
+			tostring(Skada.current.mobname))
+	end
 
 	if Skada.debuglog_on then
 		local set, count, names = Skada.current, 0, {}
@@ -2715,9 +2846,13 @@ function combat_end(curtime)
 					actor.enemy and ",enemy" or "", tostring(actor.damage), tostring(actor.heal))
 			end
 		end
-		Skada:LogDebug("segment", "ending %s: time=%s gotboss=%s success=%s stopped=%s type=%s damage=%s heal=%s actors=%d",
+		Skada:LogDebug("segment", "ending %s: time=%s gotboss=%s success=%s (source=%s) stopped=%s type=%s damage=%s heal=%s actors=%d",
 			tostring(set.mobname), tostring(elapsed), tostring(set.gotboss), tostring(set.success),
+			tostring(set.success_src or "none"),
 			tostring(set.stopped), tostring(set.type), tostring(set.damage), tostring(set.heal), count)
+		if pending_kills and not set.success then
+			Skada:LogDebug("segment", "  unresolved pending kills: %s", pending_kills_str())
+		end
 		Skada:LogDebug("segment", "  actors: %s", table.concat(names, ", "))
 		Skada:LogDebug("segment", "  ticks=%d of which lockdown=%d groupInCombat=%d petsInCombat=%d petsAlone=%d staleCombat=%d",
 			tick_stats.ticks, tick_stats.lockdown, tick_stats.group, tick_stats.pets,
@@ -2744,6 +2879,22 @@ function combat_end(curtime)
 		Skada:SendMessage("COMBAT_PVP_END", nil, Skada.insType)
 	end
 
+	-- work out why a segment would be dropped while we can still read it:
+	-- process_set recycles it, and one line naming three possible reasons is
+	-- no better than no line at all.
+	local drop_reason
+	if Skada.debuglog_on then
+		local set = Skada.current
+		if P.onlykeepbosses and not set.gotboss then
+			drop_reason = "no boss and onlykeepbosses is on"
+		elseif set.mobname == nil then
+			drop_reason = "no mobname"
+		elseif not P.inCombat and curtime - set.starttime < (P.minsetlength or 5) then
+			drop_reason = format("shorter than minsetlength=%s (%d s)",
+				tostring(P.minsetlength), curtime - set.starttime)
+		end
+	end
+
 	-- process segment; nil means it was discarded and recycled,
 	-- so nothing below may touch Skada.current again.
 	local last_set = process_set(Skada.current, curtime)
@@ -2753,8 +2904,7 @@ function combat_end(curtime)
 			Skada:LogDebug("segment", "  saved as \"%s\" time=%s keep=%s", tostring(last_set.name),
 				tostring(last_set.time), tostring(last_set.keep))
 		else
-			Skada:LogDebug("segment", "  discarded: shorter than minsetlength=%s, or it had no mobname, or onlykeepbosses=%s",
-				tostring(P.minsetlength), tostring(P.onlykeepbosses))
+			Skada:LogDebug("segment", "  discarded: %s", drop_reason or "unknown")
 		end
 	end
 
@@ -2824,7 +2974,10 @@ function combat_end(curtime)
 	pending_kills, pending_any = del(pending_kills), false
 end
 
-function Skada:StopSegment(msg, phase)
+-- auto is set by the callers that stop a segment on their own (smart stop after
+-- a boss dies, autostop on a wipe): those close on a timer, see AUTOSTOP_CLOSE.
+-- a stop the user asked for has no deadline and waits for ResumeSegment.
+function Skada:StopSegment(msg, phase, auto)
 	local curtime = self.current and time()
 	if not curtime then return end
 
@@ -2861,10 +3014,11 @@ function Skada:StopSegment(msg, phase)
 	end
 
 	stopped_since = stopped_since or GetTime()
+	autostop_deadline = auto and (GetTime() + autostop_close()) or nil
 
 	self:Print(msg or L["Segment Stopped."])
-	self:LogDebug("segment", "stopped: %s (mobname=%s time=%s)", tostring(msg or L["Segment Stopped."]),
-		tostring(self.current.mobname), tostring(self.current.time))
+	self:LogDebug("segment", "stopped: %s (mobname=%s time=%s auto=%s)", tostring(msg or L["Segment Stopped."]),
+		tostring(self.current.mobname), tostring(self.current.time), auto and "yes" or "no")
 	self:RegisterEvent("PLAYER_REGEN_ENABLED")
 end
 
@@ -2906,6 +3060,7 @@ function Skada:ResumeSegment(msg, index)
 		dropped_time = dropped_time + (GetTime() - stopped_since)
 		stopped_since = nil
 	end
+	autostop_deadline = nil
 
 	self:Print(msg or L["Segment Resumed."])
 	self:LogDebug("segment", "resumed: %s (%d events dropped over %.1f s so far)",
@@ -3010,6 +3165,18 @@ do
 
 		-- pvp and arena segments are ended by their own events
 		if Skada.insType == "pvp" or Skada.insType == "arena" then return end
+
+		-- a segment frozen by smart stop or autostop records nothing, so close
+		-- it on its own deadline. waiting for the group to leave combat used to
+		-- swallow the next boss whole when the raid pulled without a break.
+		if autostop_deadline and Skada.current.stopped and GetTime() >= autostop_deadline then
+			autostop_deadline = nil
+			Skada:Debug("\124cffffbb00EndSegment\124r: Stopped Segment")
+			Skada:LogDebug("segment", "closing the stopped segment %d s after it was stopped (lockdown=%s groupInCombat=%s petsInCombat=%s)",
+				autostop_close(), tostring(lockdown), tostring(group), tostring(pets))
+			combat_end()
+			return
+		end
 
 		-- stuck combat flag: trust the combat log going quiet instead
 		local timeout = combat_idle_timeout()
@@ -3238,6 +3405,21 @@ do
 			if not _targets or not _targets[t.dstName] then
 				local isboss, bossid, bossname = Skada:IsEncounter(t.dstGUID, t.dstName)
 				if isboss then -- found?
+					-- gotboss == false means this segment already ruled a target
+					-- out, so it started on something that is not this fight.
+					-- hand the boss a segment of its own rather than let it
+					-- adopt all that trash.
+					local split = boss_split_time()
+					if split and set.gotboss == false and not set.stopped and set.starttime then
+						local elapsed = time() - set.starttime
+						if elapsed >= split then
+							Skada:LogDebug("segment", "%s pulled %d s into a segment that is not its fight, splitting",
+								tostring(bossname or t.dstName), elapsed)
+							combat_end()
+							return -- the next event opens a fresh segment for the boss
+						end
+					end
+
 					set.mobname = bossname or set.mobname or t.dstName
 					set.gotboss = bossid or true
 					track_fight_kills(set.mobname)
@@ -3245,15 +3427,25 @@ do
 					Skada:PrintFirstHit()
 					_targets = del(_targets)
 					Skada:Debug(format("\124cffffbb00Boss Check\124r: %s (%s) - match, gotboss=%s", t.dstName or "?", GetCreatureId(t.dstGUID) or 0, tostring(set.gotboss)))
-					Skada:LogDebug("boss", "detected %s from %s (%s), gotboss=%s, pending kills=%s",
-						tostring(set.mobname), tostring(t.dstName), tostring(GetCreatureId(t.dstGUID)),
-						tostring(set.gotboss), pending_kills and "yes" or "no")
+					if Skada.debuglog_on then
+						-- how far into the segment the pull happened: everything
+						-- before it is trash the boss segment ends up counting,
+						-- and it is routinely half the segment.
+						Skada:LogDebug("boss", "detected %s from %s (%s) at +%d s of the segment, gotboss=%s, pending kills=%s",
+							tostring(set.mobname), tostring(t.dstName), tostring(GetCreatureId(t.dstGUID)),
+							set.starttime and (time() - set.starttime) or 0,
+							tostring(set.gotboss), pending_kills_str())
+					end
 				else
 					_targets = _targets or new()
 					_targets[t.dstName] = true
 					set.gotboss = false
 					Skada:Debug(format("\124cffffbb00Boss Check\124r: %s (%s) - no match", t.dstName or "?", GetCreatureId(t.dstGUID) or 0))
-					Skada:LogDebug("boss", "no match for %s (%s)", tostring(t.dstName), tostring(GetCreatureId(t.dstGUID)))
+					if Skada.debuglog_on then
+						local id = GetCreatureId(t.dstGUID)
+						Skada:LogDebug("boss", "no match for %s (%s)%s", tostring(t.dstName), tostring(id),
+							Skada.creature_to_trash[id] and " [excluded: mini-boss]" or "")
+					end
 				end
 			end
 		end
@@ -3265,7 +3457,7 @@ do
 			-- If we reached the treshold for stopping the segment, do so.
 			if death_counter >= starting_members * 0.5 and not set.stopped then
 				Skada:SendMessage("COMBAT_PLAYER_WIPE", set)
-				Skada:StopSegment(L["Stopping for wipe."])
+				Skada:StopSegment(L["Stopping for wipe."], nil, true)
 			end
 		elseif event == "SPELL_RESURRECT" and src_is_interesting_nopets then
 			death_counter = death_counter - 1

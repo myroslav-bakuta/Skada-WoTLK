@@ -256,8 +256,14 @@ function Private.LogDebugHeader()
 		tostring(LibStub and LibStub.minors and LibStub.minors["AceTimer-3.0"]),
 		tostring(LibStub and LibStub.minors and LibStub.minors["AceGUI-3.0"]))
 
-	ns:LogDebug("init", "bossmod=%s DBM=%s BigWigs=%s",
-		tostring(ns.bossmod), tostring(_G.DBM ~= nil), tostring(_G.BigWigs ~= nil))
+	-- boss mod version: mod tables differ between builds, and a fight the mod
+	-- registers without a creature id is exactly what breaks defeat detection.
+	local DBM = _G.DBM
+	ns:LogDebug("init", "bossmod=%s DBM=%s (version=%s rev=%s) BigWigs=%s",
+		tostring(ns.bossmod), tostring(DBM ~= nil),
+		DBM and tostring(DBM.DisplayVersion or DBM.Version) or "-",
+		DBM and tostring(DBM.Revision) or "-",
+		tostring(_G.BigWigs ~= nil))
 
 	local P = ns.profile
 	if P then
@@ -269,8 +275,10 @@ function Private.LogDebugHeader()
 			"profile smartstop=%s smartwait=%s autostop=%s tentativecombatstart=%s",
 			tostring(P.smartstop), tostring(P.smartwait),
 			tostring(P.autostop), tostring(P.tentativecombatstart))
-		ns:LogDebug("init", "profile stalecombat=%s stalecombattime=%s",
-			tostring(P.stalecombat), tostring(P.stalecombattime))
+		ns:LogDebug("init", "profile stalecombat=%s stalecombattime=%s combatgrace=%s",
+			tostring(P.stalecombat), tostring(P.stalecombattime), tostring(P.combatgrace))
+		ns:LogDebug("init", "profile autostopclose=%s bosssplit=%s bosssplittime=%s",
+			tostring(P.autostopclose), tostring(P.bosssplit), tostring(P.bosssplittime))
 		ns:LogDebug("init",
 			"profile timemesure=%s minsetlength=%s updatefrequency=%s hidesolo=%s syncoff=%s",
 			tostring(P.timemesure), tostring(P.minsetlength),
@@ -306,11 +314,22 @@ end
 -- one line per distinct combat log actor, with every verdict Skada makes about
 -- it. this is what says why somebody never shows up in a segment.
 
+-- guidToClass holds the owner's guid for a pet, not a class, so say which one
+-- it is: a bare guid in the class column reads like a broken lookup.
+local function cached_class(guid)
+	local class = Private.guidToClass[guid]
+	if class == nil then return "nil" end
+
+	local ownerName = Private.guidToName[class]
+	if ownerName == nil then return tostring(class) end
+
+	return format("%s (owner %s)", class, ownerName)
+end
+
 function Private.LogDebugActors(t)
 	if not enabled or not log then return end
 
 	local guidToName = Private.guidToName
-	local guidToClass = Private.guidToClass
 
 	local guid = t.srcGUID
 	if guid and not once["src:" .. guid] then
@@ -319,7 +338,7 @@ function Private.LogDebugActors(t)
 			tostring(t.srcName), guid, Private.DecodeFlags(t.srcFlags),
 			tostring(t:SourceInGroup()), tostring(t:SourceInGroup(true)),
 			tostring(t:SourceIsPet()), tostring(t:SourceIsPet(true)),
-			tostring(guidToName[guid]), tostring(guidToClass[guid]), tostring(t.event))
+			tostring(guidToName[guid]), cached_class(guid), tostring(t.event))
 	end
 
 	guid = t.dstGUID
@@ -329,7 +348,7 @@ function Private.LogDebugActors(t)
 			tostring(t.dstName), guid, Private.DecodeFlags(t.dstFlags),
 			tostring(t:DestInGroup()), tostring(t:DestInGroup(true)),
 			tostring(t:DestIsPet()),
-			tostring(guidToName[guid]), tostring(guidToClass[guid]), tostring(t.event))
+			tostring(guidToName[guid]), cached_class(guid), tostring(t.event))
 	end
 end
 

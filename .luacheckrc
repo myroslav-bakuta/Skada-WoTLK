@@ -55,6 +55,8 @@ globals = {
 	-- so luacheck cannot see where they are defined.
 	"SkadaDB",
 	"SkadaCharDB",
+	"SkadaDebugLog",
+	"SkadaLocaleDB",
 	"SkadaImprovementDB",
 	"SkadaStorageDB",
 

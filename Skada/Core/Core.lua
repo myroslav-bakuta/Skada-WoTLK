@@ -3364,6 +3364,31 @@ do
 			return
 		end
 
+		-- a second boss pulled inside a boss segment that never ended. the
+		-- gunship battle is the case that needs this: it is won by sinking a
+		-- ship, so nothing dies and the segment runs on until the group leaves
+		-- combat, swallowing the next boss whole.
+		if set.gotboss and trigger_events[t.event] and src_is_interesting
+			and not t:DestIsFriendly() and (not _targets or not _targets[t.dstName]) then
+			local split = boss_split_time()
+			if split and not set.stopped and set.starttime and (time() - set.starttime) >= split then
+				local isboss, bossid, bossname = Skada:IsEncounter(t.dstGUID, t.dstName)
+				-- both have to differ: the id alone changes between the
+				-- creatures of one multi-boss fight, and the name alone is the
+				-- mob's own whenever the fight has no creature_to_fight entry.
+				-- an add of this fight still matches on one or the other.
+				if isboss and bossid ~= set.gotboss and bossname ~= set.mobname then
+					Skada:LogDebug("segment", "%s pulled inside the %s segment, splitting",
+						tostring(bossname or t.dstName), tostring(set.mobname))
+					combat_end()
+					return -- the next event opens a fresh segment for the boss
+				end
+				-- not a new fight: cache it so this runs once per target
+				_targets = _targets or new()
+				_targets[t.dstName] = true
+			end
+		end
+
 		-- boss already detected?
 		if set.gotboss then
 			-- boss defeated event. this runs even with DBM/BigWigs around:

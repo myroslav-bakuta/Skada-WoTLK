@@ -745,10 +745,8 @@ ns.creature_to_boss = {
 --
 -- fights left out on purpose, they have no death to key on and still need a
 -- boss mod: Valithria Dreamwalker (healed, never dies), Faction Champions
--- (only part of the roster spawns), Mimiron (his parts die once per phase, and
--- boss_never_dies below closes his fight instead) and
--- the Icecrown Gunship Battle (neither ship nor either commander ever dies,
--- the loser's ship simply pulls away).
+-- (only part of the roster spawns), and Mimiron and the Icecrown Gunship
+-- Battle, whose fights boss_never_dies below closes instead.
 
 ns.fight_to_boss = {
 	[L["Ingvar the Plunderer"]] = 23980, -- only the undead Ingvar stays down
@@ -758,7 +756,12 @@ ns.fight_to_boss = {
 	[L["Yogg-Saron"]] = 33288, -- Yogg-Saron (after Brain & Guardians)
 	[L["The Northrend Beasts"]] = 34797, -- Icehowl, always the last of the three
 
-	[L["Blood Prince Council"]] = {37970, 37972, 37973}, -- Valanar, Keleseth, Taldaram
+	-- the three princes share one life: only the prince holding Invocation of
+	-- Blood can be damaged, the other two sit at 1 HP, and when the fight is
+	-- won they all go down together. the client does not always send a
+	-- UNIT_DIED for every one of them (Keleseth despawned instead in a 25h
+	-- log), so waiting for all three loses the kill.
+	[L["Blood Prince Council"]] = {37970, 37972, 37973, any = true}, -- Valanar, Keleseth, Taldaram
 	[L["Skarvald and Dalronn"]] = {24200, 24201}, -- either jarl may die first
 	[L["Twin Val'kyr"]] = {34496, 34497}, -- Eydis Darkbane, Fjola Lightbane
 	[L["The Iron Council"]] = {32857, 32867, 32927}, -- Brundir, Steelbreaker, Molgeim
@@ -785,7 +788,14 @@ ns.boss_never_dies = {
 	-- leaves his loot in a cache: Winter, Storms and Innovation respectively.
 	[32845] = true, -- Hodir, "I... I am released from his grasp... at last."
 	[32865] = true, -- Thorim, "Stay your arms! I yield!"
-	[33350] = true -- Mimiron, ejects once V-07-TR-0N is downed
+	[33350] = true, -- Mimiron, ejects once V-07-TR-0N is downed
+
+	-- [[ Icecrown Citadel ]] --
+	-- the gunship battle is won by sinking the enemy ship with siege damage,
+	-- not by killing anyone: the losing ship simply pulls away and both
+	-- commanders survive. the ships are the only ids the fight can be keyed on.
+	[37215] = true, -- Orgrim's Hammer
+	[37540] = true -- The Skybreaker
 }
 
 -------------------------------------------------------------------------------

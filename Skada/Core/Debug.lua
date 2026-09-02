@@ -268,8 +268,8 @@ function Private.LogDebugHeader()
 	local P = ns.profile
 	if P then
 		ns:LogDebug("init",
-			"profile onlykeepbosses=%s alwayskeepbosses=%s setstokeep=%s setslimit=%s",
-			tostring(P.onlykeepbosses), tostring(P.alwayskeepbosses),
+			"profile onlykeepbosses=%s alwayskeepbosses=%s keepwipes=%s setstokeep=%s setslimit=%s",
+			tostring(P.onlykeepbosses), tostring(P.alwayskeepbosses), tostring(P.keepwipes),
 			tostring(P.setstokeep), tostring(P.setslimit))
 		ns:LogDebug("init",
 			"profile smartstop=%s smartwait=%s autostop=%s tentativecombatstart=%s",

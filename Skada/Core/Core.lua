@@ -369,7 +369,10 @@ local function process_set(set, curtime, mobname)
 				-- pinned attempts on the same boss so a long night of progress
 				-- pulls cannot fill the whole segment budget on its own. they are
 				-- only unpinned, so clean_sets trims them in its own time.
-				if set.success then
+				--
+				-- keepwipes turns that off for the user who wants every attempt
+				-- of a progress night to stay, kill or no kill.
+				if set.success and not P.keepwipes then
 					release_failed_attempts(set.gotboss, set.mobname)
 				end
 			end

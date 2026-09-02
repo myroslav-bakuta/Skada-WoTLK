@@ -122,6 +122,7 @@ Skada.defaults = {
 		autostopclose = 5,
 		bosssplit = true,
 		bosssplittime = 30,
+		keepwipes = false,
 		timemesure = 2,
 		tooltiprows = 3,
 		totalflag = 0x10,
@@ -1074,6 +1075,37 @@ options.args.tweaks = {
 							type = "description",
 							name = L["opt_tweaks_bosssplit_note"],
 							order = 40,
+							width = "full"
+						}
+					}
+				},
+				keepwipes_opt = {
+					type = "group",
+					name = L["Keep Failed Attempts"],
+					desc = format(L["Options for %s."], L["Keep Failed Attempts"]),
+					order = 23,
+					args = {
+						keepwipesdesc = {
+							type = "description",
+							name = L["opt_tweaks_keepwipes_desc"],
+							fontSize = "medium",
+							order = 10,
+							width = "full"
+						},
+						keepwipes = {
+							type = "toggle",
+							name = L["Enable"],
+							disabled = function()
+								return not Skada.profile.alwayskeepbosses
+							end,
+							order = 20
+						},
+						keepwipesnote = {
+							type = "description",
+							name = function()
+								return format(L["opt_tweaks_keepwipes_note"], L["Always save boss fights"])
+							end,
+							order = 30,
 							width = "full"
 						}
 					}

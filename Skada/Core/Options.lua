@@ -1121,6 +1121,9 @@ options.args.tweaks = {
 							max = 20000,
 							step = 100,
 							bigStep = 500,
+							-- a five digit ceiling and a long label do not fit
+							-- the 200px a slider gets in a shared row
+							width = "full",
 							order = 40
 						},
 						minattemptnote = {
@@ -1318,7 +1321,10 @@ end
 function Private.OpenOptions(win)
 	if not ACR:GetOptionsTable(folder) then
 		LibStub("AceConfig-3.0"):RegisterOptionsTable(folder, options)
-		ACD:SetDefaultSize(folder, 630, 500)
+		-- 630x500 left the description pane too narrow to read and clipped
+		-- the longer slider labels outright. the window is still resizable,
+		-- this only sets what it opens at.
+		ACD:SetDefaultSize(folder, 780, 560)
 	end
 
 	if not ACD:Close(folder) then

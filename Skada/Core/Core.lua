@@ -336,6 +336,36 @@ local function release_failed_attempts(gotboss, mobname)
 	end
 end
 
+-- a boss segment worth pinning has to show an actual attempt behind it. a pet
+-- that wandered into the boss and pulled it, or a boss that evaded at once,
+-- leaves a segment carrying the boss name and next to nothing else, and
+-- alwayskeepbosses would keep that for good.
+--
+-- the group never entering combat is the tell both cases share, so that alone
+-- decides it: what the players did, not why the fight started. the damage
+-- floor is a second net for the run where one player got a hit in before the
+-- boss reset. a kill is always a real attempt and skips the check outright.
+local function is_real_attempt(set)
+	if set.success then return true end -- a kill is never junk
+
+	-- the group was in combat on no tick of the whole segment: only pets, or
+	-- nobody at all, ever fought.
+	if tick_stats.ticks > 0 and tick_stats.group == 0 then
+		return false, "the group never entered combat"
+	end
+
+	-- a pull that produced almost no damage never happened either. the floor
+	-- is per second so a long fight is not judged by the same number as a
+	-- short one, and it stays far under anything a real pull reaches.
+	local damage = set.damage or 0
+	local floor = (P.minattemptdps or 0) * max(1, set.time or 1)
+	if floor > 0 and damage < floor then
+		return false, format("damage %d is under %d", damage, floor)
+	end
+
+	return true
+end
+
 -- process the given set and stores into sv.
 -- returns the set if it survived, nil if it was recycled.
 local tinsert = table.insert
@@ -359,8 +389,18 @@ local function process_set(set, curtime, mobname)
 
 			-- always keep boss fights. an aborted pull counts as one, so log
 			-- what is being pinned: a 34s segment with no damage in it is kept
-			-- for good and only the user can delete it again.
+			-- for good and only the user can delete it again. a segment with no
+			-- real attempt behind it is left unpinned instead, so the ordinary
+			-- segment limit trims it away like any other.
+			local real, why
 			if set.gotboss and P.alwayskeepbosses then
+				real, why = is_real_attempt(set)
+			end
+
+			if why then
+				Skada:LogDebug("segment", "  not pinned, no real attempt: %s (time=%s damage=%s)",
+					tostring(why), tostring(set.time), tostring(set.damage))
+			elseif real then
 				set.keep = true
 				Skada:LogDebug("segment", "  pinned by alwayskeepbosses: time=%s success=%s damage=%s",
 					tostring(set.time), tostring(set.success), tostring(set.damage))

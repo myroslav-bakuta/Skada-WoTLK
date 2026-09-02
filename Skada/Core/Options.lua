@@ -123,6 +123,7 @@ Skada.defaults = {
 		bosssplit = true,
 		bosssplittime = 30,
 		keepwipes = false,
+		minattemptdps = 1000,
 		timemesure = 2,
 		tooltiprows = 3,
 		totalflag = 0x10,
@@ -1106,6 +1107,25 @@ options.args.tweaks = {
 								return format(L["opt_tweaks_keepwipes_note"], L["Always save boss fights"])
 							end,
 							order = 30,
+							width = "full"
+						},
+						minattemptdps = {
+							type = "range",
+							name = L["Minimum Attempt DPS"],
+							desc = L["opt_tweaks_minattemptdps_desc"],
+							disabled = function()
+								return not Skada.profile.alwayskeepbosses
+							end,
+							min = 0,
+							max = 20000,
+							step = 100,
+							bigStep = 500,
+							order = 40
+						},
+						minattemptnote = {
+							type = "description",
+							name = L["opt_tweaks_minattemptdps_note"],
+							order = 50,
 							width = "full"
 						}
 					}

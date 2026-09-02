@@ -336,22 +336,57 @@ local function release_failed_attempts(gotboss, mobname)
 	end
 end
 
--- a boss segment worth pinning has to show an actual attempt behind it. a pet
--- that wandered into the boss and pulled it, or a boss that evaded at once,
--- leaves a segment carrying the boss name and next to nothing else, and
--- alwayskeepbosses would keep that for good.
+-- the segment name is fixed by the first mob the combat log happens to name,
+-- and in a raid that is often an ordinary mob out of the trash pack: four
+-- different trash pulls of one night came back as "Spider", "Spider (2)" and
+-- so on, telling nobody anything.
 --
--- the group never entering combat is the tell both cases share, so that alone
+-- once the segment is over the mobs can be ranked instead, so the name goes to
+-- the one the raid actually fought: most damage taken from the raid, falling
+-- back to the damage it dealt. a mob that neither dealt nor took a hit is a
+-- bystander and is never considered, which is exactly what a critter is. a
+-- boss fight already carries the right name and is left alone.
+local function rename_after_main_enemy(set)
+	if set.gotboss or not set.actors then return end
+
+	local best, best_score
+	for name, actor in pairs(set.actors) do
+		if actor.enemy then
+			-- damage taken by the mob is what the raid did to it, and it ranks
+			-- above the damage it dealt: the target the raid burned is the
+			-- fight, not whatever hit hardest back.
+			local taken = actor.damaged or 0
+			local dealt = actor.damage or 0
+			local score = (taken * 2) + dealt
+			if score > 0 and (not best_score or score > best_score) then
+				best, best_score = name, score
+			end
+		end
+	end
+
+	if best and best ~= set.mobname then
+		Skada:LogDebug("segment", "  renamed \"%s\" to \"%s\", the mob the raid actually fought",
+			tostring(set.mobname), tostring(best))
+		set.mobname = best
+	end
+end
+
+-- a boss segment worth pinning has to show an actual attempt behind it. a pet
+-- that pulled the boss, or a boss that evaded at once, leaves a segment
+-- carrying the boss name and next to nothing else, and alwayskeepbosses would
+-- keep that for good.
+--
+-- the raid never entering combat is the tell both cases share, so that alone
 -- decides it: what the players did, not why the fight started. the damage
 -- floor is a second net for the run where one player got a hit in before the
 -- boss reset. a kill is always a real attempt and skips the check outright.
 local function is_real_attempt(set)
 	if set.success then return true end -- a kill is never junk
 
-	-- the group was in combat on no tick of the whole segment: only pets, or
+	-- the raid was in combat on no tick of the whole segment: only pets, or
 	-- nobody at all, ever fought.
 	if tick_stats.ticks > 0 and tick_stats.group == 0 then
-		return false, "the group never entered combat"
+		return false, "the raid never entered combat"
 	end
 
 	-- a pull that produced almost no damage never happened either. the floor
@@ -385,6 +420,12 @@ local function process_set(set, curtime, mobname)
 		if set.mobname ~= nil and (P.inCombat or curtime - set.starttime >= (P.minsetlength or 5)) then
 			set.endtime = set.endtime and set.endtime > set.starttime and set.endtime or curtime
 			set.time = max(1, set.endtime - set.starttime)
+
+			-- a phase set is handed its parent's name and must keep it
+			if not mobname and P.trashrename then
+				rename_after_main_enemy(set)
+			end
+
 			set.name = check_set_name(set)
 
 			-- always keep boss fights. an aborted pull counts as one, so log

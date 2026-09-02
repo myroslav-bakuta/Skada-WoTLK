@@ -124,6 +124,7 @@ Skada.defaults = {
 		bosssplittime = 30,
 		keepwipes = false,
 		minattemptdps = 1000,
+		trashrename = true,
 		timemesure = 2,
 		tooltiprows = 3,
 		totalflag = 0x10,
@@ -1126,6 +1127,32 @@ options.args.tweaks = {
 							type = "description",
 							name = L["opt_tweaks_minattemptdps_note"],
 							order = 50,
+							width = "full"
+						}
+					}
+				},
+				trashrename_opt = {
+					type = "group",
+					name = L["Name Segments By Main Enemy"],
+					desc = format(L["Options for %s."], L["Name Segments By Main Enemy"]),
+					order = 24,
+					args = {
+						trashrenamedesc = {
+							type = "description",
+							name = L["opt_tweaks_trashrename_desc"],
+							fontSize = "medium",
+							order = 10,
+							width = "full"
+						},
+						trashrename = {
+							type = "toggle",
+							name = L["Enable"],
+							order = 20
+						},
+						trashrenamenote = {
+							type = "description",
+							name = L["opt_tweaks_trashrename_note"],
+							order = 30,
 							width = "full"
 						}
 					}

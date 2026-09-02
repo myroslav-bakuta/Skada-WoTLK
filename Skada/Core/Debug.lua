@@ -279,7 +279,8 @@ function Private.LogDebugHeader()
 			tostring(P.stalecombat), tostring(P.stalecombattime), tostring(P.combatgrace))
 		ns:LogDebug("init", "profile autostopclose=%s bosssplit=%s bosssplittime=%s",
 			tostring(P.autostopclose), tostring(P.bosssplit), tostring(P.bosssplittime))
-		ns:LogDebug("init", "profile minattemptdps=%s", tostring(P.minattemptdps))
+		ns:LogDebug("init", "profile minattemptdps=%s trashrename=%s",
+			tostring(P.minattemptdps), tostring(P.trashrename))
 		ns:LogDebug("init",
 			"profile timemesure=%s minsetlength=%s updatefrequency=%s hidesolo=%s syncoff=%s",
 			tostring(P.timemesure), tostring(P.minsetlength),

@@ -686,6 +686,11 @@ ns.creature_to_fight = {
 	[33432] = L["Mimiron"], -- Leviathan Mk II
 	[33651] = L["Mimiron"], -- VX-001
 	[33670] = L["Mimiron"], -- Aerial Command Unit
+	[33293] = L["XT-002 Deconstructor"], -- XT-002 Deconstructor
+	[33329] = L["XT-002 Deconstructor"], -- Heart of the Deconstructor
+	[33343] = L["XT-002 Deconstructor"], -- XS-013 Scrapbot
+	[33344] = L["XT-002 Deconstructor"], -- XM-024 Pummeller
+	[33346] = L["XT-002 Deconstructor"], -- XE-321 Boombot
 }
 
 -------------------------------------------------------------------------------
@@ -730,6 +735,16 @@ ns.creature_to_boss = {
 	[33432] = 33350, -- Leviathan Mk II > Mimiron
 	[33651] = 33350, -- VX-001 > Mimiron
 	[33670] = 33350, -- Aerial Command Unit > Mimiron
+
+	-- the heart is exposed at 75/50/25% and LibBossIDs calls it a boss of its
+	-- own, which split one fight into a boss segment per phase. it is an add:
+	-- killing it does not end the fight, it turns on hard mode and heals
+	-- XT-002 to full. the three spawns are not in LibBossIDs and only need the
+	-- mapping so their damage lands on the right fight.
+	[33329] = 33293, -- Heart of the Deconstructor > XT-002
+	[33343] = 33293, -- XS-013 Scrapbot > XT-002
+	[33344] = 33293, -- XM-024 Pummeller > XT-002
+	[33346] = 33293, -- XE-321 Boombot > XT-002
 }
 
 -------------------------------------------------------------------------------
@@ -752,6 +767,7 @@ ns.fight_to_boss = {
 	[L["Ingvar the Plunderer"]] = 23980, -- only the undead Ingvar stays down
 	[L["Thaddius"]] = 15928, -- Thaddius (after Feugen & Stalagg)
 	[L["Kologarn"]] = 32930, -- Kologarn (arms respawn)
+	[L["XT-002 Deconstructor"]] = 33293, -- XT-002 (the heart never dies)
 	[L["Auriaya"]] = 33515, -- Auriaya (after Sentries & Feral Defender)
 	[L["Yogg-Saron"]] = 33288, -- Yogg-Saron (after Brain & Guardians)
 	[L["The Northrend Beasts"]] = 34797, -- Icehowl, always the last of the three

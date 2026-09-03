@@ -927,6 +927,7 @@ ns.ukLocale = {
 	["The Iron Council"] = "Залізна рада",
 	["The Northrend Beasts"] = "Чудовиська Нордскола",
 	["Thorim"] = "Торім",
+	["XT-002 Deconstructor"] = "Руйнівник XT-002",
 	["Twin Val'kyr"] = "Валькірії-близнючки",
 	["Lady Deathwhisper"] = "Леді Смертний Шепіт",
 	["Valithria Dreamwalker"] = "Валітрія Сноходиця",

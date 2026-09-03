@@ -918,6 +918,7 @@ L["The Four Horsemen"] = true
 L["The Iron Council"] = true
 L["The Northrend Beasts"] = true
 L["Thorim"] = true
+L["XT-002 Deconstructor"] = true
 L["Twin Val'kyr"] = true
 L["Lady Deathwhisper"] = true
 L["Valithria Dreamwalker"] = true

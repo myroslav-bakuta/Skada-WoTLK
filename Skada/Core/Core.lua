@@ -336,6 +336,71 @@ local function release_failed_attempts(gotboss, mobname)
 	end
 end
 
+-- the segment name is fixed by the first mob the combat log happens to name,
+-- and in a raid that is often an ordinary mob out of the trash pack: four
+-- different trash pulls of one night came back as "Spider", "Spider (2)" and
+-- so on, telling nobody anything.
+--
+-- once the segment is over the mobs can be ranked instead, so the name goes to
+-- the one the raid actually fought: most damage taken from the raid, falling
+-- back to the damage it dealt. a mob that neither dealt nor took a hit is a
+-- bystander and is never considered, which is exactly what a critter is. a
+-- boss fight already carries the right name and is left alone.
+local function rename_after_main_enemy(set)
+	if set.gotboss or not set.actors then return end
+
+	local best, best_score
+	for name, actor in pairs(set.actors) do
+		if actor.enemy then
+			-- damage taken by the mob is what the raid did to it, and it ranks
+			-- above the damage it dealt: the target the raid burned is the
+			-- fight, not whatever hit hardest back.
+			local taken = actor.damaged or 0
+			local dealt = actor.damage or 0
+			local score = (taken * 2) + dealt
+			if score > 0 and (not best_score or score > best_score) then
+				best, best_score = name, score
+			end
+		end
+	end
+
+	if best and best ~= set.mobname then
+		Skada:LogDebug("segment", "  renamed \"%s\" to \"%s\", the mob the raid actually fought",
+			tostring(set.mobname), tostring(best))
+		set.mobname = best
+	end
+end
+
+-- a boss segment worth pinning has to show an actual attempt behind it. a pet
+-- that pulled the boss, or a boss that evaded at once, leaves a segment
+-- carrying the boss name and next to nothing else, and alwayskeepbosses would
+-- keep that for good.
+--
+-- the raid never entering combat is the tell both cases share, so that alone
+-- decides it: what the players did, not why the fight started. the damage
+-- floor is a second net for the run where one player got a hit in before the
+-- boss reset. a kill is always a real attempt and skips the check outright.
+local function is_real_attempt(set)
+	if set.success then return true end -- a kill is never junk
+
+	-- the raid was in combat on no tick of the whole segment: only pets, or
+	-- nobody at all, ever fought.
+	if tick_stats.ticks > 0 and tick_stats.group == 0 then
+		return false, "the raid never entered combat"
+	end
+
+	-- a pull that produced almost no damage never happened either. the floor
+	-- is per second so a long fight is not judged by the same number as a
+	-- short one, and it stays far under anything a real pull reaches.
+	local damage = set.damage or 0
+	local floor = (P.minattemptdps or 0) * max(1, set.time or 1)
+	if floor > 0 and damage < floor then
+		return false, format("damage %d is under %d", damage, floor)
+	end
+
+	return true
+end
+
 -- process the given set and stores into sv.
 -- returns the set if it survived, nil if it was recycled.
 local tinsert = table.insert
@@ -355,12 +420,28 @@ local function process_set(set, curtime, mobname)
 		if set.mobname ~= nil and (P.inCombat or curtime - set.starttime >= (P.minsetlength or 5)) then
 			set.endtime = set.endtime and set.endtime > set.starttime and set.endtime or curtime
 			set.time = max(1, set.endtime - set.starttime)
+
+			-- a phase set is handed its parent's name and must keep it
+			if not mobname and P.trashrename then
+				rename_after_main_enemy(set)
+			end
+
 			set.name = check_set_name(set)
 
 			-- always keep boss fights. an aborted pull counts as one, so log
 			-- what is being pinned: a 34s segment with no damage in it is kept
-			-- for good and only the user can delete it again.
+			-- for good and only the user can delete it again. a segment with no
+			-- real attempt behind it is left unpinned instead, so the ordinary
+			-- segment limit trims it away like any other.
+			local real, why
 			if set.gotboss and P.alwayskeepbosses then
+				real, why = is_real_attempt(set)
+			end
+
+			if why then
+				Skada:LogDebug("segment", "  not pinned, no real attempt: %s (time=%s damage=%s)",
+					tostring(why), tostring(set.time), tostring(set.damage))
+			elseif real then
 				set.keep = true
 				Skada:LogDebug("segment", "  pinned by alwayskeepbosses: time=%s success=%s damage=%s",
 					tostring(set.time), tostring(set.success), tostring(set.damage))
@@ -369,7 +450,10 @@ local function process_set(set, curtime, mobname)
 				-- pinned attempts on the same boss so a long night of progress
 				-- pulls cannot fill the whole segment budget on its own. they are
 				-- only unpinned, so clean_sets trims them in its own time.
-				if set.success then
+				--
+				-- keepwipes turns that off for the user who wants every attempt
+				-- of a progress night to stay, kill or no kill.
+				if set.success and not P.keepwipes then
 					release_failed_attempts(set.gotboss, set.mobname)
 				end
 			end
@@ -3362,6 +3446,31 @@ do
 		-- don't go further for arena/pvp
 		if set.type == "pvp" or set.type == "arena" then
 			return
+		end
+
+		-- a second boss pulled inside a boss segment that never ended. the
+		-- gunship battle is the case that needs this: it is won by sinking a
+		-- ship, so nothing dies and the segment runs on until the group leaves
+		-- combat, swallowing the next boss whole.
+		if set.gotboss and trigger_events[t.event] and src_is_interesting
+			and not t:DestIsFriendly() and (not _targets or not _targets[t.dstName]) then
+			local split = boss_split_time()
+			if split and not set.stopped and set.starttime and (time() - set.starttime) >= split then
+				local isboss, bossid, bossname = Skada:IsEncounter(t.dstGUID, t.dstName)
+				-- both have to differ: the id alone changes between the
+				-- creatures of one multi-boss fight, and the name alone is the
+				-- mob's own whenever the fight has no creature_to_fight entry.
+				-- an add of this fight still matches on one or the other.
+				if isboss and bossid ~= set.gotboss and bossname ~= set.mobname then
+					Skada:LogDebug("segment", "%s pulled inside the %s segment, splitting",
+						tostring(bossname or t.dstName), tostring(set.mobname))
+					combat_end()
+					return -- the next event opens a fresh segment for the boss
+				end
+				-- not a new fight: cache it so this runs once per target
+				_targets = _targets or new()
+				_targets[t.dstName] = true
+			end
 		end
 
 		-- boss already detected?

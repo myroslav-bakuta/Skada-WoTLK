@@ -686,6 +686,11 @@ ns.creature_to_fight = {
 	[33432] = L["Mimiron"], -- Leviathan Mk II
 	[33651] = L["Mimiron"], -- VX-001
 	[33670] = L["Mimiron"], -- Aerial Command Unit
+	[33293] = L["XT-002 Deconstructor"], -- XT-002 Deconstructor
+	[33329] = L["XT-002 Deconstructor"], -- Heart of the Deconstructor
+	[33343] = L["XT-002 Deconstructor"], -- XS-013 Scrapbot
+	[33344] = L["XT-002 Deconstructor"], -- XM-024 Pummeller
+	[33346] = L["XT-002 Deconstructor"], -- XE-321 Boombot
 }
 
 -------------------------------------------------------------------------------
@@ -730,6 +735,16 @@ ns.creature_to_boss = {
 	[33432] = 33350, -- Leviathan Mk II > Mimiron
 	[33651] = 33350, -- VX-001 > Mimiron
 	[33670] = 33350, -- Aerial Command Unit > Mimiron
+
+	-- the heart is exposed at 75/50/25% and LibBossIDs calls it a boss of its
+	-- own, which split one fight into a boss segment per phase. it is an add:
+	-- killing it does not end the fight, it turns on hard mode and heals
+	-- XT-002 to full. the three spawns are not in LibBossIDs and only need the
+	-- mapping so their damage lands on the right fight.
+	[33329] = 33293, -- Heart of the Deconstructor > XT-002
+	[33343] = 33293, -- XS-013 Scrapbot > XT-002
+	[33344] = 33293, -- XM-024 Pummeller > XT-002
+	[33346] = 33293, -- XE-321 Boombot > XT-002
 }
 
 -------------------------------------------------------------------------------
@@ -745,20 +760,24 @@ ns.creature_to_boss = {
 --
 -- fights left out on purpose, they have no death to key on and still need a
 -- boss mod: Valithria Dreamwalker (healed, never dies), Faction Champions
--- (only part of the roster spawns), Mimiron (his parts die once per phase, and
--- boss_never_dies below closes his fight instead) and
--- the Icecrown Gunship Battle (neither ship nor either commander ever dies,
--- the loser's ship simply pulls away).
+-- (only part of the roster spawns), and Mimiron and the Icecrown Gunship
+-- Battle, whose fights boss_never_dies below closes instead.
 
 ns.fight_to_boss = {
 	[L["Ingvar the Plunderer"]] = 23980, -- only the undead Ingvar stays down
 	[L["Thaddius"]] = 15928, -- Thaddius (after Feugen & Stalagg)
 	[L["Kologarn"]] = 32930, -- Kologarn (arms respawn)
+	[L["XT-002 Deconstructor"]] = 33293, -- XT-002 (the heart never dies)
 	[L["Auriaya"]] = 33515, -- Auriaya (after Sentries & Feral Defender)
 	[L["Yogg-Saron"]] = 33288, -- Yogg-Saron (after Brain & Guardians)
 	[L["The Northrend Beasts"]] = 34797, -- Icehowl, always the last of the three
 
-	[L["Blood Prince Council"]] = {37970, 37972, 37973}, -- Valanar, Keleseth, Taldaram
+	-- the three princes share one life: only the prince holding Invocation of
+	-- Blood can be damaged, the other two sit at 1 HP, and when the fight is
+	-- won they all go down together. the client does not always send a
+	-- UNIT_DIED for every one of them (Keleseth despawned instead in a 25h
+	-- log), so waiting for all three loses the kill.
+	[L["Blood Prince Council"]] = {37970, 37972, 37973, any = true}, -- Valanar, Keleseth, Taldaram
 	[L["Skarvald and Dalronn"]] = {24200, 24201}, -- either jarl may die first
 	[L["Twin Val'kyr"]] = {34496, 34497}, -- Eydis Darkbane, Fjola Lightbane
 	[L["The Iron Council"]] = {32857, 32867, 32927}, -- Brundir, Steelbreaker, Molgeim
@@ -785,7 +804,14 @@ ns.boss_never_dies = {
 	-- leaves his loot in a cache: Winter, Storms and Innovation respectively.
 	[32845] = true, -- Hodir, "I... I am released from his grasp... at last."
 	[32865] = true, -- Thorim, "Stay your arms! I yield!"
-	[33350] = true -- Mimiron, ejects once V-07-TR-0N is downed
+	[33350] = true, -- Mimiron, ejects once V-07-TR-0N is downed
+
+	-- [[ Icecrown Citadel ]] --
+	-- the gunship battle is won by sinking the enemy ship with siege damage,
+	-- not by killing anyone: the losing ship simply pulls away and both
+	-- commanders survive. the ships are the only ids the fight can be keyed on.
+	[37215] = true, -- Orgrim's Hammer
+	[37540] = true -- The Skybreaker
 }
 
 -------------------------------------------------------------------------------

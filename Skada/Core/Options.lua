@@ -122,6 +122,9 @@ Skada.defaults = {
 		autostopclose = 5,
 		bosssplit = true,
 		bosssplittime = 30,
+		keepwipes = false,
+		minattemptdps = 1000,
+		trashrename = true,
 		timemesure = 2,
 		tooltiprows = 3,
 		totalflag = 0x10,
@@ -1078,6 +1081,85 @@ options.args.tweaks = {
 						}
 					}
 				},
+				keepwipes_opt = {
+					type = "group",
+					name = L["Keep Failed Attempts"],
+					desc = format(L["Options for %s."], L["Keep Failed Attempts"]),
+					order = 23,
+					args = {
+						keepwipesdesc = {
+							type = "description",
+							name = L["opt_tweaks_keepwipes_desc"],
+							fontSize = "medium",
+							order = 10,
+							width = "full"
+						},
+						keepwipes = {
+							type = "toggle",
+							name = L["Enable"],
+							disabled = function()
+								return not Skada.profile.alwayskeepbosses
+							end,
+							order = 20
+						},
+						keepwipesnote = {
+							type = "description",
+							name = function()
+								return format(L["opt_tweaks_keepwipes_note"], L["Always save boss fights"])
+							end,
+							order = 30,
+							width = "full"
+						},
+						minattemptdps = {
+							type = "range",
+							name = L["Minimum Attempt DPS"],
+							desc = L["opt_tweaks_minattemptdps_desc"],
+							disabled = function()
+								return not Skada.profile.alwayskeepbosses
+							end,
+							min = 0,
+							max = 20000,
+							step = 100,
+							bigStep = 500,
+							-- a five digit ceiling and a long label do not fit
+							-- the 200px a slider gets in a shared row
+							width = "full",
+							order = 40
+						},
+						minattemptnote = {
+							type = "description",
+							name = L["opt_tweaks_minattemptdps_note"],
+							order = 50,
+							width = "full"
+						}
+					}
+				},
+				trashrename_opt = {
+					type = "group",
+					name = L["Name Segments By Main Enemy"],
+					desc = format(L["Options for %s."], L["Name Segments By Main Enemy"]),
+					order = 24,
+					args = {
+						trashrenamedesc = {
+							type = "description",
+							name = L["opt_tweaks_trashrename_desc"],
+							fontSize = "medium",
+							order = 10,
+							width = "full"
+						},
+						trashrename = {
+							type = "toggle",
+							name = L["Enable"],
+							order = 20
+						},
+						trashrenamenote = {
+							type = "description",
+							name = L["opt_tweaks_trashrename_note"],
+							order = 30,
+							width = "full"
+						}
+					}
+				},
 				debuglog_opt = {
 					type = "group",
 					name = L["Debug Log"],
@@ -1239,7 +1321,10 @@ end
 function Private.OpenOptions(win)
 	if not ACR:GetOptionsTable(folder) then
 		LibStub("AceConfig-3.0"):RegisterOptionsTable(folder, options)
-		ACD:SetDefaultSize(folder, 630, 500)
+		-- 630x500 left the description pane too narrow to read and clipped
+		-- the longer slider labels outright. the window is still resizable,
+		-- this only sets what it opens at.
+		ACD:SetDefaultSize(folder, 780, 560)
 	end
 
 	if not ACD:Close(folder) then

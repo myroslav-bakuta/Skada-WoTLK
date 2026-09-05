@@ -11,7 +11,7 @@
 ## Author: Kappa
 ## X-Author-Original: Kader (|cff808080bkader#5341|r)
 ## X-Website-Original: https://github.com/bkader/Skada-WoTLK
-## Version: 1.9.8
+## Version: 1.9.9
 ## X-Date: 2026-08-30 @ 07:31 |cff808080UTC|r
 ## X-Credits: Zarnivoop
 ## X-Category: Combat

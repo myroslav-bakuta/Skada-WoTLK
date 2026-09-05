@@ -3657,8 +3657,12 @@ do
 		self._Time = GetTime()
 
 		-- only pet/guardian activity may keep the segment alive, see
-		-- pets_in_combat above.
-		if guidToOwner[t.srcGUID] or guidToOwner[t.dstGUID] then
+		-- pets_in_combat above. a pet acting on itself is not a fight: hunter
+		-- pet buffs (Bloodthirsty heals and energizes once a second, Frenzy,
+		-- Rabid Power) keep ticking long after the target is dead, and used to
+		-- pad every solo trash segment with the whole duration of those auras.
+		-- a real fight always has a second party, so require src ~= dst.
+		if t.srcGUID ~= t.dstGUID and (guidToOwner[t.srcGUID] or guidToOwner[t.dstGUID]) then
 			pet_activity = self._Time
 		end
 

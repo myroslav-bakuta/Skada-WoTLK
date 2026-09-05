@@ -5,7 +5,7 @@ local L = Skada.Locale
 local ACD = LibStub("AceConfigDialog-3.0")
 local ACR = LibStub("AceConfigRegistry-3.0")
 
-local min, max = math.min, math.max
+local min, max, floor = math.min, math.max, math.floor
 local next, format = next, format or string.format
 local wipe, del = wipe, Private.delTable
 local ConfirmDialog = Private.ConfirmDialog
@@ -1318,6 +1318,13 @@ do
 	end
 end
 
+-- option groups whose children are plain groups: AceGUI draws those as a
+-- second tree inside the tab, the one the divider belongs to.
+local nested_trees = {
+	{"generaloptions", "general"},
+	{"tweaks", "advanced"}
+}
+
 function Private.OpenOptions(win)
 	if not ACR:GetOptionsTable(folder) then
 		LibStub("AceConfig-3.0"):RegisterOptionsTable(folder, options)
@@ -1325,6 +1332,18 @@ function Private.OpenOptions(win)
 		-- the longer slider labels outright. the window is still resizable,
 		-- this only sets what it opens at.
 		ACD:SetDefaultSize(folder, 780, 560)
+
+		-- a nested option group is drawn as a second tree inside the tab, and
+		-- AceGUI gives every tree the same fixed 175px however wide the pane
+		-- it sits in is, so on the widened window the divider sat well left of
+		-- centre. split the pane the tab actually gets instead: the window
+		-- less the outer tree and the padding AceGUI puts between the two.
+		local pane = 780 - 175 - 20
+		for i = 1, #nested_trees do
+			local status = ACD:GetStatusTable(folder, nested_trees[i])
+			status.groups = status.groups or {}
+			status.groups.treewidth = floor(pane * 0.5)
+		end
 	end
 
 	if not ACD:Close(folder) then

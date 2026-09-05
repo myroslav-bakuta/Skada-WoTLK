@@ -122,7 +122,7 @@ Skada.defaults = {
 		autostopclose = 5,
 		bosssplit = true,
 		bosssplittime = 30,
-		keepwipes = false,
+		dropwipes = true,
 		minattemptdps = 1000,
 		trashrename = true,
 		timemesure = 2,
@@ -1081,20 +1081,20 @@ options.args.tweaks = {
 						}
 					}
 				},
-				keepwipes_opt = {
+				dropwipes_opt = {
 					type = "group",
-					name = L["Keep Failed Attempts"],
-					desc = format(L["Options for %s."], L["Keep Failed Attempts"]),
+					name = L["Drop Failed Attempts"],
+					desc = format(L["Options for %s."], L["Drop Failed Attempts"]),
 					order = 23,
 					args = {
-						keepwipesdesc = {
+						dropwipesdesc = {
 							type = "description",
-							name = L["opt_tweaks_keepwipes_desc"],
+							name = L["opt_tweaks_dropwipes_desc"],
 							fontSize = "medium",
 							order = 10,
 							width = "full"
 						},
-						keepwipes = {
+						dropwipes = {
 							type = "toggle",
 							name = L["Enable"],
 							disabled = function()
@@ -1102,10 +1102,10 @@ options.args.tweaks = {
 							end,
 							order = 20
 						},
-						keepwipesnote = {
+						dropwipesnote = {
 							type = "description",
 							name = function()
-								return format(L["opt_tweaks_keepwipes_note"], L["Always save boss fights"])
+								return format(L["opt_tweaks_dropwipes_note"], L["Always save boss fights"])
 							end,
 							order = 30,
 							width = "full"

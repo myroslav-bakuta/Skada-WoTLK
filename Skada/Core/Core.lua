@@ -469,6 +469,11 @@ local function process_set(set, curtime, mobname)
 			callbacks:Fire("Skada_SetComplete", set, curtime)
 
 			tinsert(Skada.sets, 1, set)
+			-- the array shifted under every window pinned by number, so the
+			-- next SetModes has to move them along. it is only cleared once
+			-- that shift has been applied, so a SetModes reached by another
+			-- path first (smart stop) cannot swallow it.
+			Skada.sets_shifted = true
 			Skada:Debug(format("Segment Saved: \124cffffbb00%s\124r", set.name))
 		else
 			return delete_set(set)
@@ -482,6 +487,26 @@ local function process_set(set, curtime, mobname)
 	end
 
 	return set
+end
+
+-- a segment at the given index was just removed from Skada.sets, so every
+-- window pinned by number has to follow: the one that was watching it has
+-- nothing left to show, and the ones below it shifted down by a slot.
+-- Skada:DeleteSet does the same for a segment the user deletes by hand.
+local function drop_window_set(index)
+	for i = 1, #windows do
+		local win = windows[i]
+		local selected = win and tonumber(win.selectedset)
+		if selected then
+			if selected == index then
+				win.selectedset = "current"
+				win.changed = true
+			elseif selected > index then
+				win.selectedset = selected - 1
+				win.changed = true
+			end
+		end
+	end
 end
 
 local function clean_sets(force)
@@ -503,6 +528,7 @@ local function clean_sets(force)
 	for i = #sets, 1, -1 do
 		if (force or numsets > P.setstokeep) and not sets[i].keep then
 			delete_set(tremove(sets, i))
+			drop_window_set(i)
 			numsets = numsets - 1
 			maxsets = maxsets - 1
 		end
@@ -513,6 +539,7 @@ local function clean_sets(force)
 	-- the player reasonable, otherwise they'll encounter memory issues.
 	while maxsets > Skada.maxsets and sets[maxsets] do
 		delete_set(tremove(Skada.sets, maxsets))
+		drop_window_set(maxsets)
 		maxsets = maxsets - 1
 	end
 end
@@ -3155,10 +3182,16 @@ function Skada:SetModes()
 	if self.modes_set then return end
 	self.modes_set = true
 
+	-- only a saved segment shifts the array. StopSegment (smart stop) also
+	-- lands here without inserting anything, and moving the windows then
+	-- would walk them off the fight the player is looking at.
+	local shifted = self.sets_shifted
+	self.sets_shifted = nil
+
 	for i = 1, #windows do
 		local win = windows[i]
 		if win then
-			if win.selectedset ~= "current" and win.selectedset ~= "total" then
+			if shifted and win.selectedset ~= "current" and win.selectedset ~= "total" then
 				win:SetSelectedSet(nil, 1) -- move to next set
 			end
 

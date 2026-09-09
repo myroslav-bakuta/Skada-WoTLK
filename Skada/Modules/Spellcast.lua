@@ -142,12 +142,19 @@ Skada:RegisterModule("Casts", function(L, P)
 				return self.castspells[spellid]
 			end
 
+			-- no exact key: the same spell can sit under several keys at once,
+			-- one per rank and one per school the log reported. sum them all,
+			-- otherwise a rank swap mid fight shows a single rank's casts and
+			-- reads as fewer presses than the player actually made.
 			local spellname = spellnames[spellid]
+			local total = nil
 			for spellstring, cast in pairs(self.castspells) do
-				local name = spellnames[spellstring]
-				if spellname == name then
-					return format(cast_string, cast)
+				if spellname == spellnames[spellstring] then
+					total = (total or 0) + cast
 				end
+			end
+			if total then
+				return format(cast_string, total)
 			end
 		end
 		return format(cast_string, "")

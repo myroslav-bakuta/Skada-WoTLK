@@ -308,6 +308,8 @@ L["There is no data to reset."] = "Нет данных для сброса."
 L["Skip reset dialog"] = "Пропустить диалог сброса"
 L["opt_skippopup_desc"] = "Включите это, если хотите, чтобы Skada сбрасывалась без диалогового окна подтверждения."
 L["Are you sure you want to reinstall Skada?"] = "Вы уверены, что хотите переустановить Skada?"
+L["opt_recommended_settings_ask"] = "Skada теперь поставляется с набором проверенных настроек для сегментов, отчетов и нескольких дополнительных модулей.\n\nПрименить их к этому профилю? Шрифты, цвета, текстуры и положение окна останутся без изменений."
+L["Recommended settings applied. Reload to load the newly enabled modules."] = "Рекомендуемые настройки применены. Перезагрузите интерфейс, чтобы загрузить включенные модули."
 -- general options
 L["Show minimap button"] = "Показывать кнопку у миникарты"
 L["Toggles showing the minimap button."] = "Отобразить/скрыть кнопку у миникарты."

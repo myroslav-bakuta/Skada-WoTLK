@@ -342,6 +342,8 @@ L["There is no data to reset."] = true
 L["Skip reset dialog"] = true
 L["opt_skippopup_desc"] = "Enable this if you want Skada to reset without the confirmation dialog."
 L["Are you sure you want to reinstall Skada?"] = true
+L["opt_recommended_settings_ask"] = "Skada now ships with a set of tested defaults for segment handling, reporting and a few extra modules.\n\nApply them to this profile? Your fonts, colors, textures and window position are not touched."
+L["Recommended settings applied. Reload to load the newly enabled modules."] = true
 -- general options
 L["Show minimap button"] = true
 L["Toggles showing the minimap button."] = true

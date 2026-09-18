@@ -1175,6 +1175,106 @@ do
 end
 
 -------------------------------------------------------------------------------
+-- one-time offer of the tested defaults
+--
+-- changing Skada.defaults only reaches brand new profiles: AceDB fills a
+-- profile once, so anyone who already played keeps whatever the old defaults
+-- wrote. this asks them once, on login, whether to take the new values.
+--
+-- only the settings below are touched. fonts, colors, textures and the window
+-- position stay as the user set them, which is the whole point of asking
+-- instead of resetting the profile.
+
+do
+	local ConfirmDialog = Private.ConfirmDialog
+
+	-- bumped whenever a new batch of defaults is worth offering again
+	local RECOMMENDED_VERSION = 1
+
+	local recommended = {
+		alwayskeepbosses = true,
+		smartstop = true,
+		smartwait = 0.5,
+		showtotals = true,
+		dropwipes = false,
+		setstokeep = 25
+	}
+
+	local recommended_report = {
+		mode = "Enemy Damage Taken",
+		channel = "raid",
+		number = 25
+	}
+
+	local recommended_columns = {
+		Skada_Deaths_Source = true,
+		Skada_Deaths_Survivability = true
+	}
+
+	local recommended_unblocked = {
+		"Improvement",
+		"Overhealing",
+		"Overkill",
+		"Total Healing",
+		"Useful Damage"
+	}
+
+	local t = {timeout = 0, whileDead = 1}
+
+	local function apply()
+		local P = Skada.profile
+		if not P then return end
+
+		for key, value in pairs(recommended) do
+			P[key] = value
+		end
+
+		P.report = P.report or {}
+		for key, value in pairs(recommended_report) do
+			P.report[key] = value
+		end
+
+		P.columns = P.columns or {}
+		for key, value in pairs(recommended_columns) do
+			P.columns[key] = value
+		end
+
+		P.modulesBlocked = P.modulesBlocked or {}
+		for i = 1, #recommended_unblocked do
+			P.modulesBlocked[recommended_unblocked[i]] = nil
+		end
+
+		Skada.global.recommended = RECOMMENDED_VERSION
+
+		-- unblocking a module only takes effect once it is loaded
+		Skada:ApplySettings()
+		Skada:NotifyChange()
+		Skada:Print(L["Recommended settings applied. Reload to load the newly enabled modules."])
+	end
+
+	local function decline()
+		Skada.global.recommended = RECOMMENDED_VERSION
+	end
+
+	-- set from the OnNewProfile callback: a profile AceDB has just created
+	-- already carries the new defaults, so there is nothing to offer.
+	-- it runs from inside OnInitialize, before Skada.global is assigned,
+	-- hence data.global rather than the usual shorthand.
+	function Skada:MarkProfileCurrent()
+		if self.data then
+			self.data.global.recommended = RECOMMENDED_VERSION
+		end
+	end
+
+	function Skada:OfferRecommendedSettings()
+		local G = self.global
+		if not G or G.recommended == RECOMMENDED_VERSION then return end
+
+		ConfirmDialog(L["opt_recommended_settings_ask"], apply, decline, t)
+	end
+end
+
+-------------------------------------------------------------------------------
 -- bossmods callbacks
 
 local find, lower = string.find, string.lower

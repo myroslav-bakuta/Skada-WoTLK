@@ -404,6 +404,8 @@ ns.ukLocale = {
 	["Skip reset dialog"] = "Пропускати діалог скидання",
 	["opt_skippopup_desc"] = "Увімкніть це, якщо хочете, щоб Skada скидалася без діалогового вікна підтвердження.",
 	["Are you sure you want to reinstall Skada?"] = "Ви впевнені, що хочете перевстановити Skada?",
+	["opt_recommended_settings_ask"] = "Skada тепер постачається з набором перевірених налаштувань для сегментів, звітів та кількох додаткових модулів.\n\nЗастосувати їх до цього профілю? Шрифти, кольори, текстури та позиція вікна залишаться без змін.",
+	["Recommended settings applied. Reload to load the newly enabled modules."] = "Рекомендовані налаштування застосовано. Перезавантажте інтерфейс, щоб завантажити увімкнені модулі.",
 	-- general options
 	["Show minimap button"] = "Показувати кнопку біля мінімапи",
 	["Toggles showing the minimap button."] = "Показати/сховати кнопку біля мінімапи.",

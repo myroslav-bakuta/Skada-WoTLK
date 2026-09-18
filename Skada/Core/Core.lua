@@ -2677,6 +2677,11 @@ end
 function Skada:OnInitialize()
 	self.data = LibStub("AceDB-3.0"):New("SkadaDB", self.defaults, true)
 
+	-- registered before the first read of data.profile: AceDB builds the
+	-- profile lazily and fires OnNewProfile from that very access, so a later
+	-- registration would miss a fresh install entirely.
+	self.data.RegisterCallback(self, "OnNewProfile", "MarkProfileCurrent")
+
 	if type(SkadaCharDB) ~= "table" then
 		SkadaCharDB = {}
 	end
@@ -2784,6 +2789,10 @@ function Skada:OnEnable()
 	Private.SetupDebugLog()
 	self.__memory_timer = self:ScheduleTimer("CheckMemory", 3)
 	self.__garbage_timer = self:ScheduleTimer("CleanGarbage", 4)
+
+	-- delayed: a popup fired straight from OnEnable lands before the UI is
+	-- ready for it and other addons are still loading their own dialogs.
+	self:ScheduleTimer("OfferRecommendedSettings", 5)
 end
 
 -- called on boss defeat

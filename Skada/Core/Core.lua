@@ -593,8 +593,10 @@ local function summon_pet(petGUID, ownerGUID)
 	ownerGUID = guidToClass[guidOrClass] and guidOrClass or ownerGUID
 	guidToOwner[petGUID] = ownerGUID
 
-	Skada:LogDebug("pet", "summoned %s owner=%s (%s)", tostring(petGUID),
-		tostring(ownerGUID), tostring(guidToName[ownerGUID]))
+	if Skada.debuglog_on then
+		Skada:LogDebug("pet", "summoned %s owner=%s (%s)", tostring(petGUID),
+			tostring(ownerGUID), tostring(guidToName[ownerGUID]))
+	end
 
 	-- "totem > elemental" can arrive before "shaman > totem", leaving the
 	-- elemental owned by the totem. re-point whatever this pet owns.
@@ -609,7 +611,9 @@ local dismiss_pet
 do
 	local dismiss_timers = nil
 	local function dismiss_handler(guid)
-		Skada:LogDebug("pet", "dismissed %s (was owned by %s)", tostring(guid), tostring(guidToOwner[guid]))
+		if Skada.debuglog_on then
+			Skada:LogDebug("pet", "dismissed %s (was owned by %s)", tostring(guid), tostring(guidToOwner[guid]))
+		end
 		guidToOwner[guid] = nil
 		guidToClass[guid] = nil
 

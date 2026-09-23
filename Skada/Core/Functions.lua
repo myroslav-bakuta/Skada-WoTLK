@@ -1631,10 +1631,14 @@ do
 				self:Debug(format("Unknown unit detected: \124cffffbb00%s\124r (%s)", actorname, actorid))
 			end
 
-			self:LogDebug("actor", "created %s (%s) class=%s enemy=%s fake=%s flags=%s",
-				tostring(actorname), tostring(actorid), tostring(actor.class),
-				tostring(actor.enemy), tostring(actor.fake),
-				type(actorflags) == "number" and Private.DecodeFlags(actorflags) or tostring(actorflags))
+			-- guarded: the arguments are built before LogDebug can bail out,
+			-- and DecodeFlags allocates for every actor of every segment.
+			if self.debuglog_on then
+				self:LogDebug("actor", "created %s (%s) class=%s enemy=%s fake=%s flags=%s",
+					tostring(actorname), tostring(actorid), tostring(actor.class),
+					tostring(actor.enemy), tostring(actor.fake),
+					type(actorflags) == "number" and Private.DecodeFlags(actorflags) or tostring(actorflags))
+			end
 
 			for _, mode in pairs(modes) do
 				-- common

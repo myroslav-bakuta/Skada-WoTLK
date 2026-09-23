@@ -3609,7 +3609,7 @@ do
 					Skada:SendMessage("COMBAT_ENCOUNTER_START", set)
 					Skada:PrintFirstHit()
 					_targets = del(_targets)
-					Skada:Debug(format("\124cffffbb00Boss Check\124r: %s (%s) - match, gotboss=%s", t.dstName or "?", GetCreatureId(t.dstGUID) or 0, tostring(set.gotboss)))
+					if P.debug then Skada:Debug(format("\124cffffbb00Boss Check\124r: %s (%s) - match, gotboss=%s", t.dstName or "?", GetCreatureId(t.dstGUID) or 0, tostring(set.gotboss))) end
 					if Skada.debuglog_on then
 						-- how far into the segment the pull happened: everything
 						-- before it is trash the boss segment ends up counting,
@@ -3623,7 +3623,7 @@ do
 					_targets = _targets or new()
 					_targets[t.dstName] = true
 					set.gotboss = false
-					Skada:Debug(format("\124cffffbb00Boss Check\124r: %s (%s) - no match", t.dstName or "?", GetCreatureId(t.dstGUID) or 0))
+					if P.debug then Skada:Debug(format("\124cffffbb00Boss Check\124r: %s (%s) - no match", t.dstName or "?", GetCreatureId(t.dstGUID) or 0)) end
 					if Skada.debuglog_on then
 						local id = GetCreatureId(t.dstGUID)
 						Skada:LogDebug("boss", "no match for %s (%s)%s", tostring(t.dstName), tostring(id),
@@ -3792,7 +3792,7 @@ do
 					else
 						tentative = tentative + 1
 					end
-					self:Debug(format("\124cffffbb00Tentative\124r: %s (%d)", t.event, tentative))
+					if P.debug then self:Debug(format("\124cffffbb00Tentative\124r: %s (%d)", t.event, tentative)) end
 					if tentative >= 5 then
 						self:CancelTimer(tentative_timer, true)
 						tentative_timer = nil

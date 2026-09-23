@@ -445,10 +445,10 @@ Skada:RegisterModule("Comparison", function(L, P)
 		if actor.id == otherid then
 			win.title = uformat(L["%s's spells on %s"], classfmt(win.actorclass, win.actorname), classfmt(win.targetclass, win.targetname))
 
-			local target = targets[win.targetname]
-			local total = target and target.amount
-			if P.absdamage and target and target.total then
-				total = target.total
+			local wtarget = targets[win.targetname]
+			local total = wtarget and wtarget.amount
+			if P.absdamage and wtarget and wtarget.total then
+				total = wtarget.total
 			end
 
 			local spells = (total and total > 0) and actor.damagespells
@@ -481,10 +481,10 @@ Skada:RegisterModule("Comparison", function(L, P)
 		local otargets, _, oactor = set:GetActorDamageTargets(othername, otherid, C)
 
 		-- the compared actor
-		local target = targets[win.targetname]
-		local total = target and target.amount
-		if P.absdamage and target and target.total then
-			total = target.total
+		local wtarget = targets[win.targetname]
+		local total = wtarget and wtarget.amount
+		if P.absdamage and wtarget and wtarget.total then
+			total = wtarget.total
 		end
 
 		-- existing targets.

@@ -1437,7 +1437,6 @@ end
 do
 	local get_screen_width
 	do
-		local floor = math.floor
 		local GetScreenWidth = GetScreenWidth
 		local screenWidth = nil
 		function get_screen_width()

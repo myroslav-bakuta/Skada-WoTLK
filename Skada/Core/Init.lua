@@ -20,8 +20,9 @@ ns.callbacks = LibStub("CallbackHandler-1.0"):New(ns)
 -- SkadaDB is still nil right here. Tables.lua and Options.lua read L[...] while
 -- they load, which fixes every string before SkadaDB ever appears -- that is
 -- why the toggle used to do nothing. SkadaLocale is a separate addon listed in
--- ## Dependencies, so it is fully loaded (and its saved variable restored)
--- before this line runs. nil means "default on".
+-- ## OptionalDeps, so when installed it is fully loaded (and its saved
+-- variable restored) before this line runs. nil means "default on", which
+-- is also what a Skada installed without SkadaLocale gets.
 if ns.ukLocale then
 	if not (SkadaLocaleDB and SkadaLocaleDB.uklang == false) then
 		for key, value in pairs(ns.ukLocale) do

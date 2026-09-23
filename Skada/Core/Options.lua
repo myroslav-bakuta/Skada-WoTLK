@@ -378,6 +378,11 @@ options.args.generaloptions = {
 							order = 1,
 							-- stored by the SkadaLocale addon, which loads
 							-- before Skada so Init.lua can read it in time.
+							-- it is optional: without it there is nowhere to
+							-- keep the flag, so the toggle would do nothing.
+							disabled = function()
+								return SkadaLocaleDB == nil
+							end,
 							get = function()
 								return not (SkadaLocaleDB and SkadaLocaleDB.uklang == false)
 							end,

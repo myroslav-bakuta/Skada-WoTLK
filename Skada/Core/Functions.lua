@@ -1820,7 +1820,9 @@ do
 			if not guid then return end
 
 			-- recently failed to resolve? don't hammer the client again.
-			local now = Skada._Time or GetTime()
+			-- GetTime, not Skada._Time: that one stands still out of combat, and
+			-- a failure cached then would never expire until the next fight.
+			local now = GetTime()
 			if unknown_pets[guid] and now < unknown_pets[guid] then return end
 
 			-- guess the pet from roster. only a complete resolve counts as a

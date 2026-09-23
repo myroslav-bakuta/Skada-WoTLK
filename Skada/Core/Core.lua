@@ -401,6 +401,28 @@ local function is_real_attempt(set)
 	return true
 end
 
+-- a window remembers a saved segment by its index in Skada.sets, and so does
+-- the view it returns to after combat. both have to move whenever the array
+-- shifts under them, and at that very moment: clean_sets trims right after an
+-- insert and counts on the indices already being current. every window moves
+-- on its own, so a child window is never moved twice through its parent.
+local function shift_window_sets(index, delta)
+	for i = 1, #windows do
+		local win = windows[i]
+		if win then
+			local selected = tonumber(win.selectedset)
+			if selected and selected >= index then
+				win.selectedset = selected + delta
+				win.changed = true
+			end
+			local restore = tonumber(win.restore_set)
+			if restore and restore >= index then
+				win.restore_set = restore + delta
+			end
+		end
+	end
+end
+
 -- process the given set and stores into sv.
 -- returns the set if it survived, nil if it was recycled.
 local tinsert = table.insert
@@ -469,11 +491,7 @@ local function process_set(set, curtime, mobname)
 			callbacks:Fire("Skada_SetComplete", set, curtime)
 
 			tinsert(Skada.sets, 1, set)
-			-- the array shifted under every window pinned by number, so the
-			-- next SetModes has to move them along. it is only cleared once
-			-- that shift has been applied, so a SetModes reached by another
-			-- path first (smart stop) cannot swallow it.
-			Skada.sets_shifted = true
+			shift_window_sets(1, 1)
 			Skada:Debug(format("Segment Saved: \124cffffbb00%s\124r", set.name))
 		else
 			return delete_set(set)
@@ -496,17 +514,17 @@ end
 local function drop_window_set(index)
 	for i = 1, #windows do
 		local win = windows[i]
-		local selected = win and tonumber(win.selectedset)
-		if selected then
-			if selected == index then
+		if win then
+			if tonumber(win.selectedset) == index then
 				win.selectedset = "current"
 				win.changed = true
-			elseif selected > index then
-				win.selectedset = selected - 1
-				win.changed = true
+			end
+			if tonumber(win.restore_set) == index then
+				win.restore_set = "current"
 			end
 		end
 	end
+	shift_window_sets(index + 1, -1)
 end
 
 local function clean_sets(force)
@@ -3191,19 +3209,13 @@ function Skada:SetModes()
 	if self.modes_set then return end
 	self.modes_set = true
 
-	-- only a saved segment shifts the array. StopSegment (smart stop) also
-	-- lands here without inserting anything, and moving the windows then
-	-- would walk them off the fight the player is looking at.
-	local shifted = self.sets_shifted
-	self.sets_shifted = nil
-
+	-- windows pinned to a saved segment were already moved along when it was
+	-- inserted (see shift_window_sets). moving them here as well used to go
+	-- wrong both ways: smart stop lands here before anything is inserted, and
+	-- the modes_set gate then skipped the call that came after the insert.
 	for i = 1, #windows do
 		local win = windows[i]
 		if win then
-			if shifted and win.selectedset ~= "current" and win.selectedset ~= "total" then
-				win:SetSelectedSet(nil, 1) -- move to next set
-			end
-
 			win:Wipe()
 			Skada.changed = true
 

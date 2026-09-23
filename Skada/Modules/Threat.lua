@@ -510,7 +510,7 @@ Skada:RegisterModule("Threat", function(L, P, _, _, M, O)
 					desc = L["opt_threat_showaggrobar_desc"],
 					order = 60
 				},
-				sep = {
+				sep2 = {
 					type = "description",
 					name = " ",
 					width = "full",

@@ -32,6 +32,8 @@ local verbose = false
 local start_clock = 0 -- GetTime() when the session started
 local start_time = 0 -- time() when the session started
 local last_roster = nil -- the last roster snapshot written, to skip repeats
+local sessions = nil -- the saved list the current session lives in
+local older_lines = 0 -- lines held by the sessions before the current one
 
 -------------------------------------------------------------------------------
 -- combat log flag decoding
@@ -90,6 +92,21 @@ local function stamp()
 	return format("%s.%03d", date("%H:%M:%S", start_time + elapsed), elapsed % 1 * 1000)
 end
 
+-- drops the oldest sessions until the whole file fits MAX_TOTAL_LINES. the
+-- current session is never dropped, so it alone is bounded by MAX_LINES.
+local function trim_sessions()
+	older_lines = 0
+	for i = 1, #sessions - 1 do
+		local lines = sessions[i].lines
+		older_lines = older_lines + (lines and #lines or 0)
+	end
+	while #sessions > 1 and older_lines + #log > MAX_TOTAL_LINES do
+		local lines = sessions[1].lines
+		older_lines = older_lines - (lines and #lines or 0)
+		table.remove(sessions, 1)
+	end
+end
+
 -- writes one line. never errors: a broken format string must not break combat.
 function ns:LogDebug(cat, fmt, ...)
 	if not enabled or not log then return end
@@ -110,6 +127,12 @@ function ns:LogDebug(cat, fmt, ...)
 	end
 
 	log[#log + 1] = format("%s [%s] %s", stamp(), cat, msg)
+
+	-- the total is checked as the session grows, not only when it starts:
+	-- otherwise a long session on top of two full ones blew well past it.
+	if older_lines > 0 and older_lines + #log > MAX_TOTAL_LINES then
+		trim_sessions()
+	end
 end
 
 -- writes one line the first time it is called with this key.
@@ -148,24 +171,16 @@ local function new_session(db)
 	start_clock, start_time = GetTime(), time()
 
 	db.sessions = db.sessions or {}
-	tinsert(db.sessions, {started = date("%Y-%m-%d %H:%M:%S"), lines = log})
+	sessions = db.sessions
+	tinsert(sessions, {started = date("%Y-%m-%d %H:%M:%S"), lines = log})
 
-	while #db.sessions > MAX_SESSIONS do
-		table.remove(db.sessions, 1)
+	while #sessions > MAX_SESSIONS do
+		table.remove(sessions, 1)
 	end
 
 	-- a raid sized session is worth several short ones, so bound the file by
-	-- the lines it holds too. the current session is never dropped.
-	local total = 0
-	for i = 1, #db.sessions do
-		local lines = db.sessions[i].lines
-		total = total + (lines and #lines or 0)
-	end
-	while #db.sessions > 1 and total > MAX_TOTAL_LINES do
-		local lines = db.sessions[1].lines
-		total = total - (lines and #lines or 0)
-		table.remove(db.sessions, 1)
-	end
+	-- the lines it holds too.
+	trim_sessions()
 end
 
 -- called from Skada:OnInitialize, once the saved variable exists.

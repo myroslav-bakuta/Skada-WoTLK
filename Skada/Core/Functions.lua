@@ -1244,7 +1244,10 @@ do
 			P.modulesBlocked[recommended_unblocked[i]] = nil
 		end
 
-		Skada.global.recommended = RECOMMENDED_VERSION
+		P.recommended = RECOMMENDED_VERSION
+		-- the segment cap is derived from setstokeep and only refreshed by the
+		-- options panel, so bring it along or the old cap trims until a reload.
+		Skada.maxsets = P.setstokeep + (P.setslimit or 0)
 
 		-- unblocking a module only takes effect once it is loaded
 		Skada:ApplySettings()
@@ -1253,22 +1256,40 @@ do
 	end
 
 	local function decline()
-		Skada.global.recommended = RECOMMENDED_VERSION
+		if Skada.profile then
+			Skada.profile.recommended = RECOMMENDED_VERSION
+		end
 	end
 
-	-- set from the OnNewProfile callback: a profile AceDB has just created
-	-- already carries the new defaults, so there is nothing to offer.
-	-- it runs from inside OnInitialize, before Skada.global is assigned,
-	-- hence data.global rather than the usual shorthand.
-	function Skada:MarkProfileCurrent()
-		if self.data then
-			self.data.global.recommended = RECOMMENDED_VERSION
+	-- the answer belongs to the profile, since that is where the settings live:
+	-- a character on a profile of its own has to be asked for that profile.
+	--
+	-- set from the OnNewProfile and OnProfileReset callbacks: a profile AceDB
+	-- has just built from the defaults already carries the new values, so there
+	-- is nothing to offer. it can run from inside OnInitialize, before
+	-- Skada.profile is assigned, hence the db the callback hands over.
+	--
+	-- never put "recommended" in Skada.defaults: AceDB would then hand the
+	-- current version to every old profile that never answered.
+	function Skada:MarkProfileCurrent(_, db)
+		local profile = db and db.profile
+		if profile then
+			profile.recommended = RECOMMENDED_VERSION
 		end
 	end
 
 	function Skada:OfferRecommendedSettings()
+		local P = self.profile
+		if not P or (P.recommended or 0) >= RECOMMENDED_VERSION then return end
+
+		-- the first version of this asked once per account, not per profile.
+		-- an account that answered back then is not asked again: its answer
+		-- stands for every profile it had.
 		local G = self.global
-		if not G or G.recommended == RECOMMENDED_VERSION then return end
+		if G and G.recommended == RECOMMENDED_VERSION then
+			P.recommended = RECOMMENDED_VERSION
+			return
+		end
 
 		ConfirmDialog(L["opt_recommended_settings_ask"], apply, decline, t)
 	end

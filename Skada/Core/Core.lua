@@ -2710,6 +2710,11 @@ function Skada:OnInitialize()
 	-- profile lazily and fires OnNewProfile from that very access, so a later
 	-- registration would miss a fresh install entirely.
 	self.data.RegisterCallback(self, "OnNewProfile", "MarkProfileCurrent")
+	-- a reset profile is back on the defaults as well. its own key: a second
+	-- registration under self would replace ReloadSettings, registered below.
+	self.data.RegisterCallback("SkadaRecommended", "OnProfileReset", function(event, db)
+		Skada:MarkProfileCurrent(event, db)
+	end)
 
 	if type(SkadaCharDB) ~= "table" then
 		SkadaCharDB = {}

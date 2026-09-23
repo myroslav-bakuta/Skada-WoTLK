@@ -1252,6 +1252,25 @@ Skada:RegisterModule("Healing Taken", function(L, P)
 		return tbl, total, actor
 	end
 
+	-- spells are keyed by the same composite spellid the window carries, so a
+	-- direct lookup finds the one spell; no need to walk every spell of every
+	-- source for it.
+	local function add_heal_source(tbl, sourcename, source, amount)
+		local t = tbl[sourcename]
+		if not t then
+			t = new()
+			t.id = source.id
+			t.class = source.class
+			t.role = source.role
+			t.spec = source.spec
+			t.enemy = source.enemy
+			t.amount = amount
+			tbl[sourcename] = t
+		else
+			t.amount = t.amount + amount
+		end
+	end
+
 	get_actor_heal_spell_sources = function(self, name, id, spellid, tbl)
 		local sources = spellid and self.actors
 		local actor = sources and self:GetActor(name, id)
@@ -1261,51 +1280,19 @@ Skada:RegisterModule("Healing Taken", function(L, P)
 		local total = 0
 
 		for sourcename, source in pairs(sources) do
-			local spells = (not source.enemy or self.arena) and source.absorbspells -- absorb spells
-			if spells then
-				for sid, spell in pairs(spells) do
-					local amount = (sid == spellid) and spell.targets and spell.targets[name]
-					if amount and amount > 0 then
-						total = total + amount
-
-						local t = tbl[sourcename]
-						if not t then
-							t = new()
-							t.id = source.id
-							t.class = source.class
-							t.role = source.role
-							t.spec = source.spec
-							t.enemy = source.enemy
-							t.amount = amount
-							tbl[sourcename] = t
-						else
-							t.amount = t.amount + amount
-						end
-					end
+			if not source.enemy or self.arena then
+				local spell = source.absorbspells and source.absorbspells[spellid] -- absorb spells
+				local amount = spell and spell.targets and spell.targets[name]
+				if amount and amount > 0 then
+					total = total + amount
+					add_heal_source(tbl, sourcename, source, amount)
 				end
-			end
 
-			spells = (not source.enemy or self.arena) and source.healspells -- heal spells
-			if spells then
-				for sid, spell in pairs(spells) do
-					local amount = (sid == spellid) and spell.targets and spell.targets[name] and spell.targets[name].amount
-					if amount and amount > 0 then
-						total = total + amount
-
-						local t = tbl[sourcename]
-						if not t then
-							t = new()
-							t.id = source.id
-							t.class = source.class
-							t.role = source.role
-							t.spec = source.spec
-							t.enemy = source.enemy
-							t.amount = amount
-							tbl[sourcename] = t
-						else
-							t.amount = t.amount + amount
-						end
-					end
+				spell = source.healspells and source.healspells[spellid] -- heal spells
+				amount = spell and spell.targets and spell.targets[name] and spell.targets[name].amount
+				if amount and amount > 0 then
+					total = total + amount
+					add_heal_source(tbl, sourcename, source, amount)
 				end
 			end
 		end

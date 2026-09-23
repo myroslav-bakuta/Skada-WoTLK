@@ -527,6 +527,17 @@ local function drop_window_set(index)
 	shift_window_sets(index + 1, -1)
 end
 
+-- recycles a trimmed segment. Skada.last may still point at it: combat_end
+-- sets it just before trimming, and with setstokeep at 0 the segment it just
+-- saved goes straight away. a late DBM callback falls back on Skada.last and
+-- would then write into a table that is back in the pool.
+local function forget_last(set)
+	if set and set == Skada.last then
+		Skada.last = nil
+	end
+	delete_set(set)
+end
+
 local function clean_sets(force)
 	local numsets = 0
 	local maxsets = 0
@@ -545,7 +556,7 @@ local function clean_sets(force)
 	-- we trim segments without touching persistent ones.
 	for i = #sets, 1, -1 do
 		if (force or numsets > P.setstokeep) and not sets[i].keep then
-			delete_set(tremove(sets, i))
+			forget_last(tremove(sets, i))
 			drop_window_set(i)
 			numsets = numsets - 1
 			maxsets = maxsets - 1
@@ -556,7 +567,7 @@ local function clean_sets(force)
 	-- the amount of segments kept can grow big, so we make sure to keep
 	-- the player reasonable, otherwise they'll encounter memory issues.
 	while maxsets > Skada.maxsets and sets[maxsets] do
-		delete_set(tremove(Skada.sets, maxsets))
+		forget_last(tremove(Skada.sets, maxsets))
 		drop_window_set(maxsets)
 		maxsets = maxsets - 1
 	end

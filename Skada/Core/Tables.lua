@@ -735,6 +735,7 @@ ns.creature_to_boss = {
 	[33432] = 33350, -- Leviathan Mk II > Mimiron
 	[33651] = 33350, -- VX-001 > Mimiron
 	[33670] = 33350, -- Aerial Command Unit > Mimiron
+	[33524] = 33271, -- Saronite Animus > General Vezax (hard mode add)
 
 	-- the heart is exposed at 75/50/25% and LibBossIDs calls it a boss of its
 	-- own, which split one fight into a boss segment per phase. it is an add:

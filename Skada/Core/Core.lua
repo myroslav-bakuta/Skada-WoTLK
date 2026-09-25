@@ -2088,6 +2088,7 @@ end
 function Skada:PLAYER_LEAVING_WORLD()
 	if not self.inCombat then return end
 	P.inCombat = true
+	self:LogDebug("segment", "leaving the world (release, loading screen or reload) ends the segment")
 	combat_end()
 end
 
@@ -2924,6 +2925,7 @@ function Skada:PLAYER_REGEN_ENABLED()
 	-- 	2. the player and the group aren't in combat
 	if self.current.stopped or (not InCombatLockdown() and not IsGroupInCombat() and not pets_in_combat()) then
 		self:Debug("\124cffffbb00EndSegment\124r: PLAYER_REGEN_ENABLED")
+		self:LogDebug("segment", "PLAYER_REGEN_ENABLED ends the segment (stopped=%s)", tostring(self.current.stopped))
 		combat_end()
 	end
 end
@@ -2937,6 +2939,7 @@ end
 
 function Skada:NewSegment()
 	if self.current then
+		self:LogDebug("segment", "a new segment was asked for, ending the current one")
 		combat_end()
 		combat_start()
 	end
@@ -3387,6 +3390,7 @@ do
 
 		if update_timer then
 			Skada:Debug("\124cffffbb00EndSegment\124r: StartCombat")
+			Skada:LogDebug("segment", "combat started with a segment still running, ending it")
 			combat_end()
 		end
 

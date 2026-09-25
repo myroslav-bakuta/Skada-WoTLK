@@ -1834,6 +1834,9 @@ do
 				local ownerGUID, ownerName = UnitGUID(ownerUnit), UnitFullName(ownerUnit)
 				if ownerGUID and ownerName then
 					guidToOwner[guid] = ownerGUID
+					if Skada.debuglog_on then
+						Skada:LogDebugOnce("petowner:" .. guid, "pet", "%s resolved to %s from the roster", guid, ownerName)
+					end
 					return ownerGUID, ownerName
 				end
 			end
@@ -1842,7 +1845,15 @@ do
 			local ownerGUID, ownerName = GetPetOwnerFromTooltip(guid)
 			if ownerGUID and ownerName then
 				guidToOwner[guid] = ownerGUID
+				if Skada.debuglog_on then
+					Skada:LogDebugOnce("petowner:" .. guid, "pet", "%s resolved to %s from the tooltip", guid, ownerName)
+				end
 				return ownerGUID, ownerName
+			end
+
+			if Skada.debuglog_on then
+				Skada:LogDebugOnce("petowner:" .. guid, "pet", "%s has no owner we can find (cachedClass=%s)",
+					guid, tostring(guidToClass[guid]))
 			end
 
 			-- couldn't resolve the owner: cache the failure.

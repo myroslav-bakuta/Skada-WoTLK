@@ -599,10 +599,13 @@ local function summon_pet(petGUID, ownerGUID)
 	end
 
 	-- "totem > elemental" can arrive before "shaman > totem", leaving the
-	-- elemental owned by the totem. re-point whatever this pet owns.
+	-- elemental owned by the totem. re-point whatever this pet owns. the key
+	-- already exists, so guidToOwner's __newindex won't mirror it: guidToClass,
+	-- which FixPets reads, is written by hand.
 	for guid, owner in next, guidToOwner do
 		if owner == petGUID then
 			guidToOwner[guid] = ownerGUID
+			guidToClass[guid] = ownerGUID
 		end
 	end
 end

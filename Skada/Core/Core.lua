@@ -83,6 +83,34 @@ local function track_fight_kills(fight)
 	end
 end
 
+-- guids of fight_roster members that died in the current segment.
+local roster_dead = nil
+
+-- a fight with a random line-up (see fight_roster) is won once every pool
+-- member the segment logged as an enemy has died. runs on deaths only, and
+-- only for a pool member, so walking the actors costs a handful of passes.
+local function roster_defeated(set, id, guid)
+	local roster = Skada.fight_roster and Skada.fight_roster[set.mobname]
+	if not roster or not roster[id] or not guid then return false end
+
+	roster_dead = roster_dead or new()
+	roster_dead[guid] = true
+
+	local seen, alive = 0, 0
+	for _, actor in pairs(set.actors or Skada.dummyTable) do
+		if actor.enemy and actor.id and roster[GetCreatureId(actor.id)] then
+			seen = seen + 1
+			if not roster_dead[actor.id] then
+				alive = alive + 1
+			end
+		end
+	end
+
+	Skada:LogDebug("boss", "%s died (%s), %d of %d in the line-up still standing",
+		tostring(set.mobname), tostring(id), alive, seen)
+	return seen > 0 and alive == 0
+end
+
 -- "36939, 37200 (any)" out of the ids still owed, for the debug log only.
 local function pending_kills_str()
 	if not pending_kills then return "no" end
@@ -3158,6 +3186,7 @@ function combat_end(curtime)
 	pet_activity = nil
 	last_combat_end = Skada._Time
 	pending_kills, pending_any = del(pending_kills), false
+	roster_dead = del(roster_dead)
 end
 
 -- auto is set by the callers that stop a segment on their own (smart stop after
@@ -3603,7 +3632,7 @@ do
 						Skada:LogDebug("boss", "%s died (%s), fight over=%s", tostring(t.dstName), tostring(id), tostring(defeated))
 					end
 				else
-					defeated = (set.gotboss == id)
+					defeated = (set.gotboss == id) or roster_defeated(set, id, t.dstGUID)
 				end
 
 				if defeated then

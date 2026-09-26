@@ -103,7 +103,18 @@ local pet_activity = nil
 -- diagnostics: what the 1s combat tick saw while a segment was open, and how
 -- long the group stayed out of combat between two segments.
 local last_combat_end = nil
-local tick_stats = {ticks = 0, lockdown = 0, group = 0, pets = 0, pets_only = 0, stale = 0}
+local tick_stats = {ticks = 0, lockdown = 0, group = 0, pets = 0, pets_only = 0, stale = 0, pet_friendly = 0}
+
+-- diagnostics: the last pet event that refreshed pet_activity, so a segment
+-- held open by pets alone says which pet, on whom and with what.
+local pet_holder = {}
+local pets_holding = nil -- true while the current run of pets-only ticks lasts
+
+local function pet_holder_str()
+	if not pet_holder.event then return "none" end
+	return format("%s %s > %s (%s) %.1f s ago", tostring(pet_holder.event), tostring(pet_holder.src),
+		tostring(pet_holder.dst), tostring(pet_holder.spell), GetTime() - (pet_holder.at or 0))
+end
 
 -- diagnostics: combat log events thrown away because the segment was stopped,
 -- and how long it stayed that way. smart stop freezes a segment seconds after a
@@ -169,14 +180,22 @@ local out_of_combat_since = nil
 local function reset_tick_stats()
 	tick_stats.ticks, tick_stats.lockdown, tick_stats.stale = 0, 0, 0
 	tick_stats.group, tick_stats.pets, tick_stats.pets_only = 0, 0, 0
+	tick_stats.pet_friendly = 0
+	pet_holder.event, pet_holder.src, pet_holder.dst, pet_holder.spell, pet_holder.at = nil, nil, nil, nil, nil
+	pets_holding = nil
 	dropped_events, dropped_time, stopped_since = 0, 0, nil
 	out_of_combat_since, autostop_deadline = nil, nil
 end
 
-local function log_segment_gap(how)
+-- t: the combat log event that opened the segment, if one did.
+local function log_segment_gap(how, t)
 	if not Skada.debuglog_on then return end
 	Skada:LogDebug("segment", "new segment via %s, %s s since the previous one ended", how,
 		last_combat_end and format("%.1f", GetTime() - last_combat_end) or "?")
+	if t then
+		Skada:LogDebug("segment", "  opened by %s %s > %s (%s) amount=%s", tostring(t.event), tostring(t.srcName),
+			tostring(t.dstName), tostring(t.spellname or t.spellid), tostring(t.amount))
+	end
 end
 
 -- list of feeds & selected feed
@@ -3018,9 +3037,12 @@ function combat_end(curtime)
 			Skada:LogDebug("segment", "  unresolved pending kills: %s", pending_kills_str())
 		end
 		Skada:LogDebug("segment", "  actors: %s", table.concat(names, ", "))
-		Skada:LogDebug("segment", "  ticks=%d of which lockdown=%d groupInCombat=%d petsInCombat=%d petsAlone=%d staleCombat=%d",
+		Skada:LogDebug("segment", "  ticks=%d of which lockdown=%d groupInCombat=%d petsInCombat=%d petsAlone=%d staleCombat=%d petFriendly=%d",
 			tick_stats.ticks, tick_stats.lockdown, tick_stats.group, tick_stats.pets,
-			tick_stats.pets_only, tick_stats.stale)
+			tick_stats.pets_only, tick_stats.stale, tick_stats.pet_friendly)
+		if tick_stats.pets_only > 0 then
+			Skada:LogDebug("segment", "  last pet event that held it: %s", pet_holder_str())
+		end
 		if dropped_events > 0 or stopped_since then
 			Skada:LogDebug("segment", "  dropped %d combat log events over %.1f s while the segment was stopped",
 				dropped_events, stopped_seconds())
@@ -3358,6 +3380,12 @@ do
 			-- the pet grace alone is holding this segment open
 			if pets and not lockdown and not group then
 				tick_stats.pets_only = tick_stats.pets_only + 1
+				if not pets_holding and Skada.debuglog_on then
+					Skada:LogDebug("segment", "only pets hold the segment now, last pet event: %s", pet_holder_str())
+				end
+				pets_holding = true
+			else
+				pets_holding = nil
 			end
 			if not lockdown and group and Skada.debuglog_on then
 				Private.LogDebugCombatHolders(tick_stats.ticks)
@@ -3691,7 +3719,7 @@ do
 
 			if src_is_interesting or dst_is_interesting then
 				self.current = create_set(L["Current"], tentative_set)
-				log_segment_gap("combat log")
+				log_segment_gap("combat log", t)
 				reset_tick_stats()
 				self.total = self.total or create_set(L["Total"])
 
@@ -3751,6 +3779,12 @@ do
 		if (guidToOwner[t.srcGUID] and bit_band(t.dstFlags or 0, BITMASK_FOE) ~= 0)
 		or (guidToOwner[t.dstGUID] and bit_band(t.srcFlags or 0, BITMASK_FOE) ~= 0) then
 			pet_activity = self._Time
+			if self.debuglog_on then
+				pet_holder.event, pet_holder.src, pet_holder.dst = t.event, t.srcName, t.dstName
+				pet_holder.spell, pet_holder.at = t.spellname or t.spellid, self._Time
+			end
+		elseif guidToOwner[t.srcGUID] or guidToOwner[t.dstGUID] then
+			tick_stats.pet_friendly = tick_stats.pet_friendly + 1 -- diagnostics only
 		end
 
 		check_cached_names(t)

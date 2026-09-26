@@ -3488,6 +3488,7 @@ do
 	local GetInstanceInfo = GetInstanceInfo
 	local GetBattlefieldArenaFaction = GetBattlefieldArenaFaction
 	local BITMASK_CONTROL_PLAYER = COMBATLOG_OBJECT_CONTROL_PLAYER or 0x00000100
+	local BITMASK_FOE = (COMBATLOG_OBJECT_REACTION_HOSTILE or 0x00000040) + (COMBATLOG_OBJECT_REACTION_NEUTRAL or 0x00000020)
 
 	local function check_boss_fight(set, t, src_is_interesting, dst_is_interesting)
 		-- set mobname
@@ -3742,8 +3743,13 @@ do
 		-- pet buffs (Bloodthirsty heals and energizes once a second, Frenzy,
 		-- Rabid Power) keep ticking long after the target is dead, and used to
 		-- pad every solo trash segment with the whole duration of those auras.
-		-- a real fight always has a second party, so require src ~= dst.
-		if t.srcGUID ~= t.dstGUID and (guidToOwner[t.srcGUID] or guidToOwner[t.dstGUID]) then
+		-- a real fight always has a second party, and that party is a foe:
+		-- totems and pets heal and buff the raid for a minute or more after a
+		-- kill, and used to keep a near empty segment open behind every boss
+		-- (ICC, 2026-09-25: 50 to 76 s each, held by pets alone). so the other side
+		-- must be hostile or neutral, which also rules out the pet itself.
+		if (guidToOwner[t.srcGUID] and bit_band(t.dstFlags or 0, BITMASK_FOE) ~= 0)
+		or (guidToOwner[t.dstGUID] and bit_band(t.srcFlags or 0, BITMASK_FOE) ~= 0) then
 			pet_activity = self._Time
 		end
 

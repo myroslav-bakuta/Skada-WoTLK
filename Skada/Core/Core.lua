@@ -3114,9 +3114,13 @@ function combat_end(curtime)
 	local last_set = process_set(Skada.current, curtime)
 
 	if Skada.debuglog_on then
-		if last_set then
+		-- onlykeepbosses hands a trash segment back without storing it,
+		-- so only the head of Skada.sets was really saved.
+		if last_set and Skada.sets[1] == last_set then
 			Skada:LogDebug("segment", "  saved as \"%s\" time=%s keep=%s", tostring(last_set.name),
 				tostring(last_set.time), tostring(last_set.keep))
+		elseif last_set then
+			Skada:LogDebug("segment", "  not kept: %s", drop_reason or "unknown")
 		else
 			Skada:LogDebug("segment", "  discarded: %s", drop_reason or "unknown")
 		end

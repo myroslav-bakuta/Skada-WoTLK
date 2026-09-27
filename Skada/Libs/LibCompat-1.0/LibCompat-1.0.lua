@@ -504,6 +504,13 @@ do
 	LGT:RegisterCallback("LibGroupTalents_Update", function(_, guid, unit, _, n1, n2, n3)
 		if not guid or not unit then return end
 
+		-- LGT may hand over a stale unit that now points at another player,
+		-- whose class would then be paired with this guid's talents.
+		if UnitGUID(unit) ~= guid then
+			unit = GetUnitIdFromGUID(guid, true)
+			if not unit then return end
+		end
+
 		local _, class = UnitClass(unit)
 		if class and specsTable[class] then
 			local nx = max(n1, n2, n3) -- highest in points spent

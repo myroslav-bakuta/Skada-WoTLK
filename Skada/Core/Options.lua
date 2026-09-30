@@ -1262,7 +1262,7 @@ do
 		if not initOptions then
 			initOptions = {
 				type = "group",
-				name = format("\124T%s:18:18:0:0:32:32:2:30:2:30\124t \124cffffd200Skada\124r \124cffffffff%s\124r", Skada.logo, L["A damage meter."]),
+				name = format("\124T%s:18:18\124t \124cffffd200Skada\124r \124cffffffff%s\124r", Skada.logo, L["A damage meter."]),
 				args = {
 					open = {
 						type = "execute",

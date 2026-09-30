@@ -153,10 +153,11 @@ ns.ukLocale = {
 	["The height of %s."] = "Висота %s.",
 	["Active Time"] = "Час активності",
 	["Segment Time"] = "Час сегмента",
-	["Click for \124cff00ff00%s\124r"] = "ЛКМ - \124cff00ff00%s\124r",
-	["Shift-Click for \124cff00ff00%s\124r"] = "Shift-ЛКМ - \124cff00ff00%s\124r",
-	["Control-Click for \124cff00ff00%s\124r"] = "Control-ЛКМ - \124cff00ff00%s\124r",
-	["Alt-Click for \124cff00ff00%s\124r"] = "Alt-ЛКМ - \124cff00ff00%s\124r",
+	["Left-Click"] = "ЛКМ",
+	["Right-Click"] = "ПКМ",
+	["Shift+Left-Click"] = "Shift+ЛКМ",
+	["Ctrl+Left-Click"] = "Ctrl+ЛКМ",
+	["Alt+Left-Click"] = "Alt+ЛКМ",
 	["Toggle Class Filter"] = "Фільтр класу",
 	["Average"] = "У середньому",
 	["Count"] = "Кількість",
@@ -386,9 +387,8 @@ ns.ukLocale = {
 	["Text Color"] = "Колір тексту",
 	["The text color of %s."] = "Колір тексту %s.",
 	["Choose the default color."] = "Виберіть колір за замовчуванням.",
-	["Hint: Left-Click to set active mode."] = "ЛКМ - вибір активного режиму.",
-	["Right-Click to set active set."] = "ПКМ - встановити активний сегмент.",
-	["Shift+Left-Click to open menu."] = "Shift+ЛКМ - відкрити меню.",
+	["Set active mode"] = "Вибрати активний режим",
+	["Set active segment"] = "Вибрати активний сегмент",
 	-- data resets
 	["Data Resets"] = "Скидання даних",
 	["Reset on entering instance"] = "Скидати при вході в підземелля",
@@ -534,11 +534,7 @@ ns.ukLocale = {
 	["Scroll Icon"] = "Значок прокручування",
 	["Scroll mouse button"] = "Кнопка прокручування миші",
 	-- minimap button
-	["Skada Summary"] = "Skada: Зведення",
-	["\124cff00ff00Left-Click\124r to toggle windows."] = "\124cff00ff00ЛКМ\124r - перемкнути вікна.",
-	["\124cff00ff00Ctrl+Left-Click\124r to show/hide windows."] = "\124cff00ff00Ctrl+ЛКМ\124r - показати/сховати вікна.",
-	["\124cff00ff00Shift+Left-Click\124r to reset."] = "\124cff00ff00Shift+ЛКМ\124r - скидання даних.",
-	["\124cff00ff00Right-Click\124r to open menu."] = "\124cff00ff00ПКМ\124r - відкрити меню.",
+	["Open Menu"] = "Відкрити меню",
 	-- skada menu
 	["Skada Menu"] = "Меню Skada",
 	["Select Segment"] = "Вибрати сегмент",
@@ -557,17 +553,17 @@ ns.ukLocale = {
 	["Open Config"] = "Відкрити конфігурацію",
 	["btn_config_desc"] = "Відкриває вікно конфігурації.",
 	["btn_reset_desc"] = [[Скидає всі дані бою, окрім позначених як збережені.
-|cff00ff00Shift+ЛКМ|r - видалити сегмент.]],
+|cffe8c07aShift+ЛКМ|r - видалити сегмент.]],
 	["Segment"] = "Сегмент",
 	["btn_segment_desc"] = [[Перейти до певного сегмента.
-|cff00ff00Shift+ЛКМ|r - |cffffbb00Наступний|r сегмент.
-|cff00ff00Shift+ПКМ|r - |cffffbb00Попередній|r сегмент.
-|cff00ff00Середній клік|r - |cffffbb00Поточний|r сегмент.]],
+|cffe8c07aShift+ЛКМ|r - наступний сегмент.
+|cffe8c07aShift+ПКМ|r - попередній сегмент.
+|cffe8c07aСередній клік|r - поточний сегмент.]],
 	["Mode"] = "Режим",
 	["Jump to a specific mode."] = "Перейти до певного режиму.",
 	["Report"] = "Звіт",
 	["btn_report_desc"] = [[Відкриває діалогове вікно, у якому можна різними способами повідомляти свої дані іншим користувачам.
-|cff00ff00Shift-ЛКМ|r - швидкий звіт.]],
+|cffe8c07aShift+ЛКМ|r - швидкий звіт.]],
 	["Stop"] = "Зупинити",
 	["btn_stop_desc"] = "Зупиняє або відновлює запис поточного сегмента. Корисно для зменшення обсягу даних при вайпі. Можливе налаштування автоматичної зупинки в опціях.",
 	["Segment Stopped."] = "Сегмент зупинено.",

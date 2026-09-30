@@ -57,11 +57,12 @@ L["Height"] = "Высота"
 L["The height of %s."] = "Высота %s."
 L["Active Time"] = "Время активности"
 L["Segment Time"] = "Время сегмента"
-L["Click for \124cff00ff00%s\124r"] = "ЛКМ - \124cff00ff00%s\124r"
-L["Shift-Click for \124cff00ff00%s\124r"] = "Shift-ЛКМ - \124cff00ff00%s\124r"
-L["Control-Click for \124cff00ff00%s\124r"] = "Control-ЛКМ - \124cff00ff00%s\124r"
-L["Alt-Click for \124cff00ff00%s\124r"] = "Alt-ЛКМ - \124cff00ff00%s\124r"
-L["Toggle Class Filter"] = "фильтр класса"
+L["Left-Click"] = "ЛКМ"
+L["Right-Click"] = "ПКМ"
+L["Shift+Left-Click"] = "Shift+ЛКМ"
+L["Ctrl+Left-Click"] = "Ctrl+ЛКМ"
+L["Alt+Left-Click"] = "Alt+ЛКМ"
+L["Toggle Class Filter"] = "Фильтр класса"
 L["Average"] = "В среднем"
 L["Count"] = "Количество"
 L["Refresh"] = "Обновление"
@@ -290,9 +291,8 @@ L["opt_useframe_desc"] = "Показывает отдельное окно. Не
 L["Text Color"] = "Цвет текста"
 L["The text color of %s."] = "Цвет текста %s."
 L["Choose the default color."] = "Выберите цвет по умолчанию."
-L["Hint: Left-Click to set active mode."] = "ЛКМ - Выбор активного режима."
-L["Right-Click to set active set."] = "ПКМ - Установить активный сегмент."
-L["Shift+Left-Click to open menu."] = "Shift+ЛКМ - Открыть меню"
+L["Set active mode"] = "Выбрать активный режим"
+L["Set active segment"] = "Выбрать активный сегмент"
 -- data resets
 L["Data Resets"] = "Сброс данных"
 L["Reset on entering instance"] = "Сбрасывать при входе в подземелье"
@@ -438,17 +438,13 @@ L["opt_wheelspeed_desc"] = "Изменяет скорость прокрутки
 L["Scroll Icon"] = "Значок прокрутки"
 L["Scroll mouse button"] = "Кнопка прокрутки мыши"
 -- minimap button
-L["Skada Summary"] = "Skada: Сводка"
-L["\124cff00ff00Left-Click\124r to toggle windows."] = "\124cff00ff00ЛКМ\124r - Окно переключения."
-L["\124cff00ff00Ctrl+Left-Click\124r to show/hide windows."] = "\124cff00ff00Ctrl+ЛКМ\124r - Отобразить/Скрыть окна."
-L["\124cff00ff00Shift+Left-Click\124r to reset."] = "\124cff00ff00Shift+ЛКМ\124r - Сброс данных."
-L["\124cff00ff00Right-Click\124r to open menu."] = "\124cff00ff00ПКМ\124r - Открыть меню."
+L["Open Menu"] = "Открыть меню"
 -- skada menu
 L["Skada Menu"] = "Меню Skada"
 L["Select Segment"] = "Выбрать сегмент"
 L["Delete Segment"] = "Удалить сегмент"
 L["Keep Segment"] = "Хранить сегмент"
-L["Toggle Windows"] = "Окно переключения"
+L["Toggle Windows"] = "Переключить окна"
 L["Show/Hide Windows"] = "Открыть/закрыть Окна"
 L["New Segment"] = "Новый сегмент"
 L["Starts a new segment."] = "Начать новый сегмент."
@@ -461,17 +457,17 @@ L["Configure"] = "Конфигурация"
 L["Open Config"] = "Открыть конфигурацию"
 L["btn_config_desc"] = "Открывает окно конфигурации."
 L["btn_reset_desc"] = [[Сбрасывает все данные боя, кроме отмеченных как сохраненные.
-|cff00ff00Shift+ЛКМ|r - Удалить сегмент.]]
+|cffe8c07aShift+ЛКМ|r - удалить сегмент.]]
 L["Segment"] = "Сегмент"
 L["btn_segment_desc"] = [[Перейти к определенному сегменту.
-|cff00ff00Shift+ЛКМ|r - |cffffbb00Следующий|r сегмент.
-|cff00ff00Shift+ПКМ|r - |cffffbb00Предыдущий|r сегмент.
-|cff00ff00Средний щелчок|r - |cffffbb00Текущий|r сегмент.]]
+|cffe8c07aShift+ЛКМ|r - следующий сегмент.
+|cffe8c07aShift+ПКМ|r - предыдущий сегмент.
+|cffe8c07aСредний щелчок|r - текущий сегмент.]]
 L["Mode"] = "Режим"
 L["Jump to a specific mode."] = "Перейти к определенному режиму."
 L["Report"] = "Отчет"
 L["btn_report_desc"] = [[Открывает диалоговое окно, в котором можно различными способами сообщать свои данные другим пользователям.
-|cff00ff00Shift-ЛКМ|r - Быстрый отчет.]]
+|cffe8c07aShift+ЛКМ|r - быстрый отчет.]]
 L["Stop"] = "Остановить"
 L["btn_stop_desc"] = "Останавливает или возобновляет запись текущего сегмента. Полезна для сокращения объема данных при вайпе. Возможна настройка автоматической остановки в настройках."
 L["Segment Stopped."] = "Сегмент остановлен."

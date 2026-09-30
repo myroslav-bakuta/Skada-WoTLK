@@ -112,9 +112,9 @@ Skada:RegisterDisplay("Data Text", "mod_broker_desc", function(L, P)
 		end
 
 		tooltip:AddLine(" ")
-		tooltip:AddLine(L["Hint: Left-Click to set active mode."], 0, 1, 0)
-		tooltip:AddLine(L["Right-Click to set active set."], 0, 1, 0)
-		tooltip:AddLine(L["Shift+Left-Click to open menu."], 0, 1, 0)
+		Private.AddKeyLine(tooltip, L["Left-Click"], L["Set active mode"])
+		Private.AddKeyLine(tooltip, L["Right-Click"], L["Set active segment"])
+		Private.AddKeyLine(tooltip, L["Shift+Left-Click"], L["Open Menu"])
 
 		tooltip:Show()
 	end

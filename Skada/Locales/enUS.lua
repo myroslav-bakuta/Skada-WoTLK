@@ -64,10 +64,11 @@ L["Height"] = true
 L["The height of %s."] = true
 L["Active Time"] = true
 L["Segment Time"] = true
-L["Click for \124cff00ff00%s\124r"] = true
-L["Shift-Click for \124cff00ff00%s\124r"] = true
-L["Control-Click for \124cff00ff00%s\124r"] = true
-L["Alt-Click for \124cff00ff00%s\124r"] = true
+L["Left-Click"] = true
+L["Right-Click"] = true
+L["Shift+Left-Click"] = true
+L["Ctrl+Left-Click"] = true
+L["Alt+Left-Click"] = true
 L["Toggle Class Filter"] = true
 L["Average"] = true
 L["Minimum"] = _G.MINIMUM
@@ -323,9 +324,8 @@ L["opt_useframe_desc"] = "Shows a standalone frame. Not needed if you are using 
 L["Text Color"] = true
 L["The text color of %s."] = true
 L["Choose the default color."] = true
-L["Hint: Left-Click to set active mode."] = true
-L["Right-Click to set active set."] = true
-L["Shift+Left-Click to open menu."] = true
+L["Set active mode"] = true
+L["Set active segment"] = true
 -- data resets
 L["Data Resets"] = true
 L["Reset"] = _G.RESET
@@ -484,11 +484,7 @@ L["Middle Button"] = _G.KEY_BUTTON3
 L["Mouse Button 4"] = _G.KEY_BUTTON4
 L["Mouse Button 5"] = _G.KEY_BUTTON5
 -- minimap button
-L["Skada Summary"] = true
-L["\124cff00ff00Left-Click\124r to toggle windows."] = true
-L["\124cff00ff00Ctrl+Left-Click\124r to show/hide windows."] = true
-L["\124cff00ff00Shift+Left-Click\124r to reset."] = true
-L["\124cff00ff00Right-Click\124r to open menu."] = true
+L["Open Menu"] = true
 -- skada menu
 L["Skada Menu"] = true
 L["Select Segment"] = true
@@ -509,17 +505,17 @@ L["Configure"] = true
 L["Open Config"] = true
 L["btn_config_desc"] = "Opens the configuration window."
 L["btn_reset_desc"] = [[Resets all fight data except those marked as kept.
-|cff00ff00Shift-LMB|r: Delete segment.]]
+|cffe8c07aShift+Left-Click|r: delete segment.]]
 L["Segment"] = true
 L["btn_segment_desc"] = [[Jump to a specific segment.
-|cff00ff00Shift-LMB|r for |cffffbb00next|r segment.
-|cff00ff00Shift-RMB|r for |cffffbb00previous|r segment.
-|cff00ff00Middle-Click|r for |cffffbb00current|r segment.]]
+|cffe8c07aShift+Left-Click|r: next segment.
+|cffe8c07aShift+Right-Click|r: previous segment.
+|cffe8c07aMiddle-Click|r: current segment.]]
 L["Mode"] = true
 L["Jump to a specific mode."] = true
 L["Report"] = true
 L["btn_report_desc"] = [[Opens a dialog that lets you report your data to others in various ways.
-|cff00ff00Shift-Click|r to Quick Report.]]
+|cffe8c07aShift+Left-Click|r: quick report.]]
 L["Stop"] = "Stop/Resume"
 L["btn_stop_desc"] = "Stops or resumes the current segment. Useful for discounting data after a wipe. Can also be set to automatically stop in the settings."
 L["Segment Stopped."] = true

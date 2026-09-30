@@ -930,6 +930,12 @@ do
 		return ok and str or gsub(gsub(fstr, "(%%+)([^%%%s<]+)", replace), "%%%%", "%%")
 	end
 
+	-- a key or click and what it does, on one tooltip row: the key on
+	-- the left in the key colour (e8c07a), the action on the right.
+	function Private.AddKeyLine(tooltip, key, action)
+		tooltip:AddDoubleLine(key, action, 0.91, 0.75, 0.48, 1, 1, 1)
+	end
+
 	Private.WrapTextInColorCode = _G.WrapTextInColorCode
 	if not Private.WrapTextInColorCode then
 		Private.WrapTextInColorCode = function(text, colorHexString)

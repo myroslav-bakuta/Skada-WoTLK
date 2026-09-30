@@ -1802,12 +1802,12 @@ do
 		end
 	end
 
-	local uformat = Private.uformat
-	local function add_click_lines(mode, label, win, t, fmt)
+	local AddKeyLine = Private.AddKeyLine
+	local function add_click_lines(mode, label, win, t, key)
 		if type(mode) == "function" then
-			t:AddLine(uformat(fmt, label))
+			AddKeyLine(t, key, label or L["Unknown"])
 		elseif not total_noclick(win.selectedset, mode) then
-			t:AddLine(format(fmt, label or mode.localeName))
+			AddKeyLine(t, key, label or mode.localeName)
 		end
 	end
 
@@ -1891,16 +1891,16 @@ do
 		end
 
 		if md.click1 then
-			add_click_lines(md.click1, md.click1_label, win, t, L["Click for \124cff00ff00%s\124r"])
+			add_click_lines(md.click1, md.click1_label, win, t, L["Left-Click"])
 		end
 		if md.click2 then
-			add_click_lines(md.click2, md.click2_label, win, t, L["Shift-Click for \124cff00ff00%s\124r"])
+			add_click_lines(md.click2, md.click2_label, win, t, L["Shift+Left-Click"])
 		end
 		if md.click3 then
-			add_click_lines(md.click3, md.click3_label, win, t, L["Control-Click for \124cff00ff00%s\124r"])
+			add_click_lines(md.click3, md.click3_label, win, t, L["Ctrl+Left-Click"])
 		end
 		if md.filterclass then
-			t:AddLine(format(L["Alt-Click for \124cff00ff00%s\124r"], L["Toggle Class Filter"]))
+			AddKeyLine(t, L["Alt+Left-Click"], L["Toggle Class Filter"])
 		end
 
 		t:Show()
@@ -2588,9 +2588,12 @@ function dataobj:OnEnter()
 	self.tooltip:SetPoint("TOPRIGHT", self, "BOTTOMRIGHT")
 	self.tooltip:ClearLines()
 
+	-- the emblem and name with the version beside it, the current fight's
+	-- summary when there is one, then what each click does.
+	self.tooltip:AddDoubleLine(format("\124T%s:16:16\124t %s", Skada.logo, folder), "v" .. Skada.version, 1, 1, 1, 0.73, 0.70, 0.77)
+
 	local set = Skada:GetSet("current")
 	if set then
-		self.tooltip:AddDoubleLine(L["Skada Summary"], Skada.version)
 		self.tooltip:AddLine(" ")
 		self.tooltip:AddDoubleLine(L["Segment Time"], formatted_set_time(set), 1, 1, 1)
 		for i = 1, #modes do
@@ -2599,15 +2602,13 @@ function dataobj:OnEnter()
 				mode:AddToTooltip(set, self.tooltip)
 			end
 		end
-		self.tooltip:AddLine(" ")
-	else
-		self.tooltip:AddDoubleLine(folder, Skada.version, nil, nil, nil, 0, 1, 0)
 	end
 
-	self.tooltip:AddLine(L["\124cff00ff00Left-Click\124r to toggle windows."], 1, 1, 1)
-	self.tooltip:AddLine(L["\124cff00ff00Ctrl+Left-Click\124r to show/hide windows."], 1, 1, 1)
-	self.tooltip:AddLine(L["\124cff00ff00Shift+Left-Click\124r to reset."], 1, 1, 1)
-	self.tooltip:AddLine(L["\124cff00ff00Right-Click\124r to open menu."], 1, 1, 1)
+	self.tooltip:AddLine(" ")
+	Private.AddKeyLine(self.tooltip, L["Left-Click"], L["Toggle Windows"])
+	Private.AddKeyLine(self.tooltip, L["Ctrl+Left-Click"], L["Show/Hide Windows"])
+	Private.AddKeyLine(self.tooltip, L["Shift+Left-Click"], L["Reset"])
+	Private.AddKeyLine(self.tooltip, L["Right-Click"], L["Open Menu"])
 
 	self.tooltip:Show()
 end

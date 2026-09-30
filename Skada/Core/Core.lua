@@ -3562,14 +3562,19 @@ do
 				if set.type == "arena" then
 					Skada:SendMessage("COMBAT_ARENA_START", set, set.mobname)
 				end
-			elseif src_is_interesting and not t:DestIsFriendly() then
+			-- only a hit names the segment. players outside the raid log as
+			-- neutral, and their buffs falling off raiders used to name a boss
+			-- pull after one of them and mark it pvp, which switched the boss
+			-- check off for the whole fight (Ruby Sanctum, 2026-09-28:
+			-- Baltharus and Saviana lost as trash).
+			elseif trigger_events[t.event] and src_is_interesting and not t:DestIsFriendly() then
 				set.mobname = t.dstName
 				if bit_band(t.dstFlags or 0, BITMASK_CONTROL_PLAYER) ~= 0 then
 					set.type = "pvp"
 					set.gotboss = false
 					Skada:SendMessage("COMBAT_PVP_START", "pvp", Skada.insType)
 				end
-			elseif dst_is_interesting and not t:SourceIsFriendly() then
+			elseif trigger_events[t.event] and dst_is_interesting and not t:SourceIsFriendly() then
 				set.mobname = t.srcName
 				if bit_band(t.srcFlags or 0, BITMASK_CONTROL_PLAYER) ~= 0 then
 					set.type = "pvp"

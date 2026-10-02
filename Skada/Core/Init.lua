@@ -1646,6 +1646,14 @@ do
 	end
 	Private.UnitFullName = UnitFullName
 
+	-- what UnitName returns until the client has loaded a unit's name
+	local unknown_names = {}
+	for _, key in ipairs({"UNKNOWN", "UNKNOWNOBJECT", "UKNOWNBEING"}) do
+		if _G[key] then
+			unknown_names[_G[key]] = true
+		end
+	end
+
 	-- adds a combatant
 	function Private.AddCombatant(unit, ownerUnit)
 		local guid = UnitGUID(unit)
@@ -1661,7 +1669,14 @@ do
 		-- for players...
 		local _, class = UnitClass(unit)
 		guidToClass[guid] = class
-		guidToName[guid] = UnitFullName(unit)
+
+		-- a name not loaded yet stays out of the cache, or every combat log
+		-- event of this player would be renamed to "Unknown" (UNIT_NAME_UPDATE
+		-- fills it in later).
+		local name = UnitName(unit)
+		if name and not unknown_names[name] then
+			guidToName[guid] = UnitFullName(unit)
+		end
 	end
 end
 

@@ -2345,6 +2345,20 @@ do
 		end
 	end
 
+	-- the roster skips names the client has not loaded yet, add them once known
+	local AddCombatant = Private.AddCombatant
+	function Skada:UNIT_NAME_UPDATE(units)
+		for unit in pairs(units) do
+			local guid = groupUnits[unit] and UnitGUID(unit)
+			if guid and not guidToName[guid] then
+				AddCombatant(unit)
+				if guidToName[guid] then
+					self:LogDebug("roster", "name loaded: unit=%s name=%s guid=%s", unit, guidToName[guid], guid)
+				end
+			end
+		end
+	end
+
 	local function CheckVehicle(unit)
 		local guid = unit and UnitGUID(unit)
 		if not guid or not guidToName[guid] then
@@ -2848,6 +2862,7 @@ function Skada:OnEnable()
 	self:RegisterEvent("PLAYER_REGEN_DISABLED")
 	self:RegisterEvent("ZONE_CHANGED_NEW_AREA", "CheckZone")
 	self:RegisterBucketEvent("UNIT_PET", 0.2)
+	self:RegisterBucketEvent("UNIT_NAME_UPDATE", 0.2)
 	self:RegisterBucketEvent("UNIT_ENTERED_VEHICLE", 0.1, "CheckVehicle")
 	self:RegisterBucketEvent("UNIT_EXITED_VEHICLE", 0.1, "CheckVehicle")
 	self:RegisterBucketEvent("PARTY_MEMBERS_CHANGED", 0.2, "UpdateRoster")

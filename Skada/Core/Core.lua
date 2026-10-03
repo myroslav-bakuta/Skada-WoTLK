@@ -3041,6 +3041,17 @@ local function is_undying_boss(set)
 	return false
 end
 
+-- such a fight leaves its adds standing: the gunship's crew is still aboard
+-- after the kill, and a straggler shot then opened a second boss segment that
+-- the never-dies rule promptly counted as another win (ICC, 2026-10-02).
+local function won_just_now(name)
+	local last = Skada.last
+	if not last or not last.success or last.mobname ~= name or not last.endtime then
+		return false
+	end
+	return (time() - last.endtime) < 60 and is_undying_boss(last)
+end
+
 -- curtime lets the caller date the end to when combat actually stopped, which
 -- is earlier than now whenever we waited out a grace period.
 function combat_end(curtime)
@@ -3677,6 +3688,11 @@ do
 		if trigger_events[t.event] and src_is_interesting and not t:DestIsFriendly() then
 			if not _targets or not _targets[t.dstName] then
 				local isboss, bossid, bossname = Skada:IsEncounter(t.dstGUID, t.dstName)
+				if isboss and won_just_now(bossname or t.dstName) then
+					Skada:LogDebug("boss", "%s was won %d s ago, %s is a straggler",
+						tostring(bossname), time() - Skada.last.endtime, tostring(t.dstName))
+					isboss = false
+				end
 				if isboss then -- found?
 					-- gotboss == false means this segment already ruled a target
 					-- out, so it started on something that is not this fight.

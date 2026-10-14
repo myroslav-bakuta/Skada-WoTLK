@@ -1653,6 +1653,7 @@ do
 			unknown_names[_G[key]] = true
 		end
 	end
+	Private.unknown_names = unknown_names
 
 	-- adds a combatant
 	function Private.AddCombatant(unit, ownerUnit)

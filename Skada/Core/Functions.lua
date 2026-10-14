@@ -2412,16 +2412,19 @@ end
 -- group buffs scanner
 
 do
-	local UnitIsDeadOrGhost, UnitBuff = UnitIsDeadOrGhost, UnitBuff
+	local UnitIsDeadOrGhost, UnitBuff, UnitName = UnitIsDeadOrGhost, UnitBuff, UnitName
 	local UnitIterator = Skada.UnitIterator
 	local actorflags = Private.DEFAULT_FLAGS
 	local clear = Private.clearTable
+	local unknown_names = Private.unknown_names
 
 	local function ScanUnitBuffs(unit, owner, t)
 		if UnitIsDeadOrGhost(unit) then return end
 
-		t.dstGUID = UnitGUID(unit)
 		t.dstName = UnitFullName(unit, owner)
+		if not t.dstName or unknown_names[t.dstName] then return end
+
+		t.dstGUID = UnitGUID(unit)
 		t.dstFlags = not owner and actorflags or nil
 
 		t.class = guidToClass[t.dstGUID]
@@ -2436,7 +2439,7 @@ do
 			local name, _, icon, _, _, duration, expires, source, _, _, id = UnitBuff(unit, i)
 			if not id then
 				break -- nothing found
-			elseif source then
+			elseif source and not unknown_names[UnitName(source)] then
 				local aura = new()
 				aura.srcGUID = UnitGUID(source)
 				aura.srcName = UnitFullName(source)

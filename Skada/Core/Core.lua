@@ -3129,6 +3129,17 @@ local function won_just_now(name)
 	return (time() - last.endtime) < 60 and is_undying_boss(last)
 end
 
+local function group_mostly_up()
+	local alive, total = 0, 0
+	for unit in Skada.UnitIterator(true) do
+		total = total + 1
+		if not UnitIsDeadOrGhost(unit) then
+			alive = alive + 1
+		end
+	end
+	return alive * 2 > total, alive, total
+end
+
 -- curtime lets the caller date the end to when combat actually stopped, which
 -- is earlier than now whenever we waited out a grace period.
 function combat_end(curtime)
@@ -3137,18 +3148,25 @@ function combat_end(curtime)
 	-- a boss that never dies as a unit (see boss_never_dies) leaves no UNIT_DIED
 	-- to key on, so only the boss mod can call the kill, and DBM on 3.3.5 reports
 	-- these late or as a wipe outright. the kill was then saved as a failed pull.
-	-- walking out of the fight with the group still standing is the kill: an
-	-- actual wipe leaves everyone dead and is caught here first. autostop is not
+	-- walking out of the fight with most of the group still standing is the kill:
+	-- a wipe can leave a few survivors who drop combat once the boss resets, and a
+	-- Hodir wipe was saved as a kill that way (Ulduar, 2026-10-14). autostop is not
 	-- involved, so this holds whether or not the user enabled it.
 	-- the group has to be out of combat as well: a raider who dies and releases
 	-- ends the segment while the rest still fight on, and two Thorim wipes were
 	-- saved as kills that way (Ulduar, 2026-10-07).
-	if not Skada.current.success and Skada.current.gotboss and not IsGroupDead()
+	if not Skada.current.success and Skada.current.gotboss
 		and not IsGroupInCombat() and is_undying_boss(Skada.current) then
-		Skada.current.success = true
-		if Skada.debuglog_on then Skada.current.success_src = "never-dies" end
-		Skada:LogDebug("boss", "%s does not die as a unit and the group is still up, counting it as a kill",
-			tostring(Skada.current.mobname))
+		local up, alive, total = group_mostly_up()
+		if up then
+			Skada.current.success = true
+			if Skada.debuglog_on then Skada.current.success_src = "never-dies" end
+			Skada:LogDebug("boss", "%s does not die as a unit and the group is still up (%d of %d alive), counting it as a kill",
+				tostring(Skada.current.mobname), alive, total)
+		else
+			Skada:LogDebug("boss", "%s does not die as a unit but only %d of %d are alive, left as a wipe",
+				tostring(Skada.current.mobname), alive, total)
+		end
 	end
 
 	if Skada.debuglog_on then

@@ -789,11 +789,12 @@ ns.fight_to_boss = {
 -------------------------------------------------------------------------------
 -- boss_never_dies
 -- bosses that are defeated without ever dying as a unit, so no UNIT_DIED can
--- close their fight. Hodir is freed rather than killed, Thorim turns friendly
--- and Mimiron ejects from his machine, and all three hand out their loot from
--- a chest instead of a corpse. that leaves only the boss mod to call the kill,
--- and DBM on 3.3.5 either reports these late or calls them a wipe outright, so
--- the segment is saved as a failed pull.
+-- close their fight. Freya and Hodir are freed rather than killed, Thorim turns
+-- friendly and Mimiron ejects from his machine, and all four hand out their
+-- loot from a chest instead of a corpse. that leaves only the boss mod to call
+-- the kill, and DBM on 3.3.5 either reports these late, calls them a wipe
+-- outright or stays silent (Freya, 2026-10-18), so the segment is saved as a
+-- failed pull.
 --
 -- for these ids only, a fight the group walked away from without wiping counts
 -- as a kill. everything else still needs a death or the boss mod, so a genuine
@@ -801,9 +802,11 @@ ns.fight_to_boss = {
 
 ns.boss_never_dies = {
 	-- [[ Ulduar ]] --
-	-- the three watchers freed from Yogg-Saron's corruption. each one yields
+	-- the four keepers freed from Yogg-Saron's corruption. each one yields
 	-- instead of dying, goes friendly, helps against Yogg-Saron later, and
-	-- leaves his loot in a cache: Winter, Storms and Innovation respectively.
+	-- leaves the loot in a chest: Freya's Gift and the caches of Winter,
+	-- Storms and Innovation.
+	[32906] = true, -- Freya, "His hold on me dissipates. I can see clearly once more."
 	[32845] = true, -- Hodir, "I... I am released from his grasp... at last."
 	[32865] = true, -- Thorim, "Stay your arms! I yield!"
 	[33350] = true, -- Mimiron, ejects once V-07-TR-0N is downed
